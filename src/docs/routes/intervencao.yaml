@@ -1,0 +1,477 @@
+tags:
+  - name: Intervenções
+    description: Operações relacionadas às intervenções pedagógicas
+
+paths:
+  /intervencoes:
+    get:
+      tags:
+        - Intervenções
+      summary: Listar intervenções
+      description: Lista intervenções com filtros opcionais
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estudanteId
+          in: query
+          description: Filtrar por ID do estudante
+          schema:
+            type: string
+            format: uuid
+        - name: equipeId
+          in: query
+          description: Filtrar por ID da equipe
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filtrar por status da intervenção
+          schema:
+            type: string
+            enum: [PLANEJADA, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+        - name: tipo
+          in: query
+          description: Filtrar por tipo de intervenção
+          schema:
+            type: string
+        - name: periodo
+          in: query
+          description: Filtrar por período (formato ISO)
+          schema:
+            type: string
+            example: 2023-01-01/2023-12-31
+      responses:
+        200:
+          description: Lista de intervenções
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Intervencao'
+              example:
+                - id: 550e8400-e29b-41d4-a716-446655440000
+                  titulo: Reforço de Matemática
+                  descricao: Intervenção para dificuldades em operações básicas
+                  objetivos: Melhorar compreensão das operações básicas de matemática
+                  estrategias: Exercícios práticos e jogos educativos
+                  status: EM_ANDAMENTO
+                  dataInicio: 2023-03-15
+                  dataFim: 2023-06-15
+                  estudanteId: 550e8400-e29b-41d4-a716-446655440001
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Intervenções
+      summary: Criar intervenção
+      description: Cria uma nova intervenção pedagógica
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - titulo
+                - descricao
+                - objetivos
+                - estrategias
+                - estudanteId
+                - dificuldadesIds
+                - responsaveisIds
+                - dataInicio
+              properties:
+                titulo:
+                  type: string
+                  description: Título da intervenção
+                  example: Reforço de Matemática
+                descricao:
+                  type: string
+                  description: Descrição detalhada da intervenção
+                  example: Intervenção para dificuldades em operações básicas
+                objetivos:
+                  type: string
+                  description: Objetivos a serem alcançados
+                  example: Melhorar compreensão das operações básicas de matemática
+                estrategias:
+                  type: string
+                  description: Estratégias a serem utilizadas
+                  example: Exercícios práticos e jogos educativos
+                recursos:
+                  type: string
+                  description: Recursos necessários para a intervenção
+                  example: Material didático, jogos e software educativo
+                estudanteId:
+                  type: string
+                  format: uuid
+                  description: ID do estudante
+                  example: 550e8400-e29b-41d4-a716-446655440001
+                dificuldadesIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: IDs das dificuldades associadas
+                  example: 
+                    - 550e8400-e29b-41d4-a716-446655440002
+                    - 550e8400-e29b-41d4-a716-446655440003
+                responsaveisIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: IDs dos responsáveis pela intervenção
+                  example:
+                    - 550e8400-e29b-41d4-a716-446655440004
+                dataInicio:
+                  type: string
+                  format: date
+                  description: Data de início da intervenção
+                  example: 2023-03-15
+                dataFim:
+                  type: string
+                  format: date
+                  description: Data de término prevista da intervenção
+                  example: 2023-06-15
+                observacoes:
+                  type: string
+                  description: Observações gerais
+                  example: Aluno demonstra resistência inicial às atividades propostas
+      responses:
+        201:
+          description: Intervenção criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Intervencao'
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          description: Estudante, dificuldade ou responsável não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Estudante não encontrado
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /intervencoes/{id}:
+    get:
+      tags:
+        - Intervenções
+      summary: Detalhar intervenção
+      description: Obtém detalhes de uma intervenção específica
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da intervenção
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Detalhes da intervenção
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Intervencao'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Intervenções
+      summary: Atualizar intervenção
+      description: Atualiza uma intervenção existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da intervenção
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titulo:
+                  type: string
+                  description: Título da intervenção
+                descricao:
+                  type: string
+                  description: Descrição detalhada da intervenção
+                objetivos:
+                  type: string
+                  description: Objetivos a serem alcançados
+                estrategias:
+                  type: string
+                  description: Estratégias a serem utilizadas
+                recursos:
+                  type: string
+                  description: Recursos necessários para a intervenção
+                status:
+                  type: string
+                  enum: [PLANEJADA, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+                  description: Status atual da intervenção
+                dificuldadesIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: IDs das dificuldades associadas
+                responsaveisIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: IDs dos responsáveis pela intervenção
+                dataInicio:
+                  type: string
+                  format: date
+                  description: Data de início da intervenção
+                dataFim:
+                  type: string
+                  format: date
+                  description: Data de término prevista da intervenção
+                observacoes:
+                  type: string
+                  description: Observações gerais
+      responses:
+        200:
+          description: Intervenção atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Intervencao'
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Intervenções
+      summary: Excluir intervenção
+      description: Exclui uma intervenção existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da intervenção
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Intervenção excluída com sucesso
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /intervencoes/{id}/progresso:
+    post:
+      tags:
+        - Intervenções
+      summary: Registrar progresso
+      description: Registra progresso em uma intervenção
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da intervenção
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - descricao
+              properties:
+                data:
+                  type: string
+                  format: date
+                  description: Data do registro
+                  example: 2023-04-05
+                descricao:
+                  type: string
+                  description: Descrição do progresso
+                  example: Aluno conseguiu resolver equações de primeiro grau
+                resultados:
+                  type: string
+                  description: Resultados observados
+                  example: Melhora significativa na compreensão de álgebra básica
+                observacoes:
+                  type: string
+                  description: Observações adicionais
+                  example: Ainda apresenta dificuldades em problemas contextualizados
+      responses:
+        201:
+          description: Progresso registrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  intervencaoId:
+                    type: string
+                    format: uuid
+                  data:
+                    type: string
+                    format: date
+                  descricao:
+                    type: string
+                  resultados:
+                    type: string
+                  observacoes:
+                    type: string
+                  registradoPor:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      nome:
+                        type: string
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /intervencoes/{id}/avaliacao:
+    post:
+      tags:
+        - Intervenções
+      summary: Avaliar eficácia
+      description: Avalia a eficácia de uma intervenção
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da intervenção
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dataAvaliacao
+                - resultado
+              properties:
+                dataAvaliacao:
+                  type: string
+                  format: date
+                  description: Data da avaliação
+                  example: 2023-06-15
+                resultado:
+                  type: string
+                  description: Resultado da intervenção
+                  example: A intervenção foi bem-sucedida, alcançando os objetivos propostos
+                observacoes:
+                  type: string
+                  description: Observações adicionais
+                  example: Recomenda-se manter atividades de reforço periódicas
+      responses:
+        201:
+          description: Avaliação registrada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  intervencaoId:
+                    type: string
+                    format: uuid
+                  dataAvaliacao:
+                    type: string
+                    format: date
+                  resultado:
+                    type: string
+                  observacoes:
+                    type: string
+                  avaliadoPor:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      nome:
+                        type: string
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+        500:
+          $ref: '#/components/responses/ServerError' 

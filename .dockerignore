@@ -1,0 +1,45 @@
+# Controle de versão
+.git
+.gitignore
+.github
+
+# Dependências
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Arquivos de construção e cache
+dist
+build
+.next
+.cache
+coverage
+.nyc_output
+*.tsbuildinfo
+
+# Arquivos de log
+logs
+*.log
+
+# Editor e IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Outros
+README.md
+LICENSE
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile* 

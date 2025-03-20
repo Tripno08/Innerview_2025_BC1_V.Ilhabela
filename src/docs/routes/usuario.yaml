@@ -1,0 +1,327 @@
+tags:
+  - name: Usuários
+    description: Operações relacionadas aos usuários do sistema
+
+paths:
+  /usuarios:
+    post:
+      tags:
+        - Usuários
+      summary: Registrar novo usuário
+      description: Cria um novo usuário no sistema
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nome
+                - email
+                - senha
+                - cargo
+              properties:
+                nome:
+                  type: string
+                  description: Nome completo do usuário
+                  example: João Silva
+                email:
+                  type: string
+                  format: email
+                  description: Email do usuário (único)
+                  example: joao.silva@exemplo.com
+                senha:
+                  type: string
+                  format: password
+                  description: Senha do usuário (min. 6 caracteres)
+                  example: senha123
+                cargo:
+                  type: string
+                  description: Cargo do usuário no sistema
+                  example: PROFESSOR
+      responses:
+        201:
+          description: Usuário registrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  nome:
+                    type: string
+                    example: João Silva
+                  email:
+                    type: string
+                    format: email
+                    example: joao.silva@exemplo.com
+                  cargo:
+                    type: string
+                    example: PROFESSOR
+        400:
+          $ref: '#/components/responses/ValidationError'
+        409:
+          description: Email já está em uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Email já está em uso
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /usuarios/autenticacao:
+    post:
+      tags:
+        - Usuários
+      summary: Autenticar usuário
+      description: Autentica um usuário e retorna token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - senha
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email do usuário
+                  example: joao.silva@exemplo.com
+                senha:
+                  type: string
+                  format: password
+                  description: Senha do usuário
+                  example: senha123
+      responses:
+        200:
+          description: Usuário autenticado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usuario:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: 550e8400-e29b-41d4-a716-446655440000
+                      nome:
+                        type: string
+                        example: João Silva
+                      email:
+                        type: string
+                        format: email
+                        example: joao.silva@exemplo.com
+                      cargo:
+                        type: string
+                        example: PROFESSOR
+                  token:
+                    type: string
+                    description: Token JWT para autenticação
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Email ou senha incorretos
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /usuarios/perfil:
+    get:
+      tags:
+        - Usuários
+      summary: Obter perfil do usuário
+      description: Retorna as informações do perfil do usuário autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Perfil do usuário
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  nome:
+                    type: string
+                    example: João Silva
+                  email:
+                    type: string
+                    format: email
+                    example: joao.silva@exemplo.com
+                  cargo:
+                    type: string
+                    example: PROFESSOR
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Usuários
+      summary: Atualizar perfil
+      description: Atualiza as informações do perfil do usuário autenticado
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nome:
+                  type: string
+                  description: Nome completo do usuário
+                  example: João Silva Atualizado
+                email:
+                  type: string
+                  format: email
+                  description: Email do usuário
+                  example: joao.silva.novo@exemplo.com
+                senhaAtual:
+                  type: string
+                  format: password
+                  description: Senha atual (obrigatória para alterar a senha)
+                  example: senha123
+                novaSenha:
+                  type: string
+                  format: password
+                  description: Nova senha (min. 6 caracteres)
+                  example: novaSenha123
+                cargo:
+                  type: string
+                  description: Cargo do usuário
+                  example: COORDENADOR
+      responses:
+        200:
+          description: Perfil atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  nome:
+                    type: string
+                    example: João Silva Atualizado
+                  email:
+                    type: string
+                    format: email
+                    example: joao.silva.novo@exemplo.com
+                  cargo:
+                    type: string
+                    example: COORDENADOR
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          description: Senha atual incorreta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Senha atual incorreta
+        409:
+          description: Email já está em uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Email já está em uso
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /usuarios/instituicao:
+    post:
+      tags:
+        - Usuários
+      summary: Associar usuário a uma instituição
+      description: Associa um usuário a uma instituição com um cargo específico
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - instituicaoId
+              properties:
+                instituicaoId:
+                  type: string
+                  format: uuid
+                  description: ID da instituição
+                  example: 550e8400-e29b-41d4-a716-446655440000
+                usuarioId:
+                  type: string
+                  format: uuid
+                  description: ID do usuário (opcional - se não informado, usa o usuário autenticado)
+                  example: 550e8400-e29b-41d4-a716-446655440000
+                cargo:
+                  type: string
+                  description: Cargo do usuário na instituição
+                  example: PROFESSOR
+      responses:
+        204:
+          description: Usuário associado com sucesso
+        400:
+          $ref: '#/components/responses/ValidationError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          description: Instituição ou usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Instituição não encontrada
+        409:
+          description: Usuário já está associado a esta instituição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: error
+                message: Usuário já está associado a esta instituição
+        500:
+          $ref: '#/components/responses/ServerError' 
