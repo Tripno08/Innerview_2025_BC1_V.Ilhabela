@@ -9,6 +9,7 @@ export declare class EstudanteRepository extends BaseRepository<Estudante> imple
     findById(id: string): Promise<Estudante | null>;
     private adaptToPrismaCreate;
     private adaptToPrismaUpdate;
+    private removerPropriedadesEntidade;
     create(data: Partial<Estudante>): Promise<Estudante>;
     update(id: string, data: Partial<Omit<Estudante, 'id'>>): Promise<Estudante>;
     delete(id: string): Promise<void>;

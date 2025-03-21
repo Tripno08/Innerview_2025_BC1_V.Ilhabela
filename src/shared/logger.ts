@@ -1,5 +1,5 @@
-import winston from 'winston';
-import { env } from '@config/env';
+import * as winston from 'winston';
+import { env } from '../config/env';
 
 // Definição de tipos personalizados para o logger
 interface ExtendedLogger extends winston.Logger {

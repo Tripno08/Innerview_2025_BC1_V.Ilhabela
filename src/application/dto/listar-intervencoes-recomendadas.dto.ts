@@ -24,6 +24,23 @@ export interface ListarIntervencoesRecomendadasDTO {
 }
 
 /**
+ * Representa os dados brutos de uma intervenção
+ */
+export interface IntervencaoData {
+  id: string;
+  titulo: string;
+  descricao: string;
+  tipo: string;
+  objetivos: string;
+  estrategias: string;
+  recursos?: string;
+  duracaoEstimada?: number;
+  nivelEficacia?: number;
+  totalUsos?: number;
+  criadoEm: Date;
+}
+
+/**
  * Representa uma intervenção recomendada para uma dificuldade
  */
 export class CatalogoIntervencao {
@@ -42,7 +59,7 @@ export class CatalogoIntervencao {
   /**
    * Criar uma representação simples a partir dos dados
    */
-  static fromData(data: any): CatalogoIntervencao {
+  static fromData(data: IntervencaoData): CatalogoIntervencao {
     const dto = new CatalogoIntervencao();
     dto.id = data.id;
     dto.titulo = data.titulo;

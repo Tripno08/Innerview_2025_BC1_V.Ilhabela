@@ -27,9 +27,17 @@ import {
   CatalogoIntervencao,
 } from '../../application/dto/listar-intervencoes-recomendadas.dto';
 import { ExcluirDificuldadeDTO } from '../../application/dto/excluir-dificuldade.dto';
+import { CargoUsuario } from '../../shared/enums';
 
-// Importação do tipo de requisição estendido do Express
-import '../../shared/types/express';
+// Interface personalizada para Request com usuário
+interface RequestWithUser extends Request {
+  user: {
+    id: string;
+    email: string;
+    cargo: CargoUsuario;
+    nome?: string;
+  };
+}
 
 /**
  * Controller para as rotas de dificuldades de aprendizagem
@@ -38,7 +46,7 @@ export class DificuldadeController {
   /**
    * Listar dificuldades de aprendizagem
    */
-  async listar(req: Request, res: Response): Promise<Response> {
+  async listar(req: RequestWithUser, res: Response): Promise<Response> {
     const { categoria, tipo, status } = req.query;
 
     const listarDificuldadesUseCase = container.resolve<
@@ -58,7 +66,7 @@ export class DificuldadeController {
   /**
    * Obter detalhes de uma dificuldade
    */
-  async detalhar(req: Request, res: Response): Promise<Response> {
+  async detalhar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
     const detalharDificuldadeUseCase = container.resolve<
@@ -76,7 +84,7 @@ export class DificuldadeController {
   /**
    * Criar uma nova dificuldade de aprendizagem
    */
-  async criar(req: Request, res: Response): Promise<Response> {
+  async criar(req: RequestWithUser, res: Response): Promise<Response> {
     const { nome, descricao, tipo, categoria, sintomas } = req.body;
 
     const criarDificuldadeUseCase =
@@ -97,7 +105,7 @@ export class DificuldadeController {
   /**
    * Atualizar uma dificuldade
    */
-  async atualizar(req: Request, res: Response): Promise<Response> {
+  async atualizar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
     const { nome, descricao, tipo, categoria, sintomas, status } = req.body;
 
@@ -122,7 +130,7 @@ export class DificuldadeController {
   /**
    * Associar uma dificuldade a um estudante
    */
-  async associarAEstudante(req: Request, res: Response): Promise<Response> {
+  async associarAEstudante(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
     const { estudanteId, observacoes, dataIdentificacao } = req.body;
 
@@ -144,7 +152,7 @@ export class DificuldadeController {
   /**
    * Remover associação de dificuldade com estudante
    */
-  async removerDeEstudante(req: Request, res: Response): Promise<Response> {
+  async removerDeEstudante(req: RequestWithUser, res: Response): Promise<Response> {
     const { id, estudanteId } = req.params;
     const { motivo } = req.body;
 
@@ -165,7 +173,7 @@ export class DificuldadeController {
   /**
    * Listar intervenções recomendadas para uma dificuldade
    */
-  async listarIntervencoesRecomendadas(req: Request, res: Response): Promise<Response> {
+  async listarIntervencoesRecomendadas(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
     const { estudanteId, limite } = req.query;
 
@@ -186,7 +194,7 @@ export class DificuldadeController {
   /**
    * Excluir uma dificuldade
    */
-  async excluir(req: Request, res: Response): Promise<Response> {
+  async excluir(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
     const excluirDificuldadeUseCase = container.resolve<IUseCase<ExcluirDificuldadeDTO, void>>(

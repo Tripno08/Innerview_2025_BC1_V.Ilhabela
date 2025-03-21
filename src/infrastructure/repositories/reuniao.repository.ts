@@ -10,7 +10,7 @@ import {
   EncaminhamentoReuniao,
 } from '@domain/entities/reuniao.entity';
 import { Status, Prioridade } from '@shared/enums';
-import { mapLocalStatusToPrisma, mapPrismaStatusToLocal } from '@shared/utils/enum-mappers';
+import { mapStatusToPrisma, mapStatusFromPrisma } from '@shared/utils/enum-mappers';
 
 /**
  * Implementação do repositório de reuniões utilizando Prisma
@@ -93,7 +93,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
       const reunioes = await this.unitOfWork.withoutTransaction((prisma) =>
         prisma.reuniao.findMany({
           where: {
-            status: mapLocalStatusToPrisma(status as Status),
+            status: mapStatusToPrisma(status),
           },
           include: this.getReuniaoIncludes(),
           orderBy: {
@@ -136,17 +136,20 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
   async create(data: Partial<Omit<Reuniao, 'id'>>): Promise<Reuniao> {
     try {
       const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
+        // Preparar dados básicos para criação da reunião
+        const createData = {
+          titulo: data.titulo,
+          equipeId: data.equipeId,
+          data: data.data,
+          local: data.local,
+          status: mapStatusToPrisma(data.status || Status.AGENDADO),
+          resumo: data.resumo || '',
+          observacoes: data.observacoes || '',
+        };
+
+        // Criar a reunião com os dados básicos
         return await prisma.reuniao.create({
-          data: {
-            titulo: data.titulo,
-            equipeId: data.equipeId,
-            data: data.data,
-            local: data.local,
-            status: mapLocalStatusToPrisma(data.status || Status.AGENDADO),
-            resumo: data.resumo || '',
-            pauta: data.pauta || '',
-            observacoes: data.observacoes || '',
-          },
+          data: createData,
           include: this.getReuniaoIncludes(),
         });
       });
@@ -163,17 +166,19 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
   async update(id: string, data: Partial<Omit<Reuniao, 'id'>>): Promise<Reuniao> {
     try {
       const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
+        // Preparar dados para atualização
+        const updateData = {
+          ...(data.titulo && { titulo: data.titulo }),
+          ...(data.data && { data: data.data }),
+          ...(data.local && { local: data.local }),
+          ...(data.resumo && { resumo: data.resumo }),
+          ...(data.observacoes && { observacoes: data.observacoes }),
+          ...(data.status && { status: mapStatusToPrisma(data.status) }),
+        };
+
         return await prisma.reuniao.update({
           where: { id },
-          data: {
-            titulo: data.titulo,
-            data: data.data,
-            local: data.local,
-            resumo: data.resumo,
-            pauta: data.pauta,
-            observacoes: data.observacoes,
-            status: data.status ? mapLocalStatusToPrisma(data.status) : undefined,
-          },
+          data: updateData,
           include: this.getReuniaoIncludes(),
         });
       });
@@ -245,15 +250,17 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
           );
         }
 
+        // Adicionar apenas campos que existem no schema
+        const participanteData = {
+          reuniaoId,
+          usuarioId,
+          cargo: cargo || 'MEMBRO',
+          presente: false,
+        };
+
         // Adiciona o participante
         await prisma.participanteReuniao.create({
-          data: {
-            reuniaoId,
-            usuarioId,
-            cargo: cargo || 'MEMBRO',
-            presente: false,
-            confirmado: false,
-          },
+          data: participanteData,
         });
       });
     } catch (error) {
@@ -322,7 +329,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
           where: { id: reuniaoId },
         });
 
-        if (reuniao && mapPrismaStatusToLocal(reuniao.status) === Status.CONCLUIDO) {
+        if (reuniao && mapStatusFromPrisma(reuniao.status) === Status.CONCLUIDO) {
           throw new AppError(
             'Não é possível alterar presenças em reuniões concluídas',
             400,
@@ -330,14 +337,13 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
           );
         }
 
-        // Atualiza a presença
+        // Atualiza a presença - usar apenas campos que existem no schema
         await prisma.participanteReuniao.update({
           where: {
             id: participante.id,
           },
           data: {
             presente,
-            confirmado: true,
           },
         });
       });
@@ -367,7 +373,6 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
         usuarioId: p.usuarioId,
         reuniaoId: p.reuniaoId,
         presente: p.presente,
-        confirmado: p.confirmado,
         papel: p.cargo,
         usuario: {
           id: p.usuario.id,
@@ -474,7 +479,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
             descricao: encaminhamentoData.descricao,
             reuniaoId: reuniaoId,
             prioridade: prioridade,
-            status: mapLocalStatusToPrisma(status),
+            status: mapStatusToPrisma(status),
             dataPrazo: encaminhamentoData.prazo,
             atribuidoPara: responsavelId,
             criadoPor: responsavelId,
@@ -494,7 +499,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
         descricao: encaminhamento.descricao,
         responsavelId: encaminhamento.atribuidoPara,
         prazo: encaminhamento.dataPrazo || undefined,
-        status: mapPrismaStatusToLocal(encaminhamento.status),
+        status: mapStatusFromPrisma(encaminhamento.status),
         prioridade: encaminhamento.prioridade as Prioridade,
         observacoes: encaminhamento.observacoes || undefined,
       };
@@ -526,7 +531,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
         descricao: e.descricao,
         responsavelId: e.atribuidoPara,
         prazo: e.dataPrazo || undefined,
-        status: mapPrismaStatusToLocal(e.status),
+        status: mapStatusFromPrisma(e.status),
         prioridade: e.prioridade as Prioridade,
         observacoes: e.observacoes || undefined,
       }));
@@ -562,7 +567,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
       const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
         return await prisma.reuniao.update({
           where: { id: reuniaoId },
-          data: { status: mapLocalStatusToPrisma(status as Status) },
+          data: { status: mapStatusToPrisma(status) },
           include: this.getReuniaoIncludes(),
         });
       });
@@ -601,7 +606,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
       equipeId: reuniaoPrisma.equipeId as string,
       resumo: reuniaoPrisma.resumo as string,
       observacoes: reuniaoPrisma.observacoes as string,
-      status: mapPrismaStatusToLocal(reuniaoPrisma.status),
+      status: mapStatusFromPrisma(reuniaoPrisma.status),
       criadoEm: reuniaoPrisma.criadoEm as Date,
       atualizadoEm: reuniaoPrisma.atualizadoEm as Date,
       participantes:
@@ -610,7 +615,6 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
           usuarioId: p.usuarioId,
           reuniaoId: p.reuniaoId,
           presente: p.presente,
-          confirmado: p.confirmado,
           papel: p.cargo,
           usuario: p.usuario,
         })) || [],
@@ -621,7 +625,7 @@ export class ReuniaoRepository extends BaseRepository<Reuniao> implements IRunia
           descricao: e.descricao,
           responsavelId: e.atribuidoPara,
           prazo: e.dataPrazo,
-          status: mapPrismaStatusToLocal(e.status),
+          status: mapStatusFromPrisma(e.status),
           prioridade: e.prioridade as Prioridade,
           observacoes: e.observacoes,
         })) || [],

@@ -1,6 +1,79 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { IUseCase } from '@application/interfaces/IUseCase';
+import { IUseCase } from '../../application/interfaces/IUseCase';
+import { Equipe, MembroEquipe, EstudanteEquipe } from '../../domain/entities/equipe.entity';
+import { CargoUsuario } from '../../shared/enums';
+
+// Interface personalizada para Request com usuário
+interface RequestWithUser extends Request {
+  user: {
+    id: string;
+    email: string;
+    cargo: CargoUsuario;
+    nome?: string;
+  };
+}
+
+// Interfaces para os DTOs
+interface ListarEquipesDTO {
+  instituicaoId?: string;
+  usuarioId?: string;
+  tipo?: string;
+}
+
+interface DetalharEquipeDTO {
+  id: string;
+  usuarioId: string;
+}
+
+interface CriarEquipeDTO {
+  nome: string;
+  descricao?: string;
+  instituicaoId?: string;
+  usuarioCriador: string;
+}
+
+interface AtualizarEquipeDTO {
+  id: string;
+  nome?: string;
+  descricao?: string;
+  status?: string;
+  usuarioId: string;
+}
+
+interface AdicionarMembroDTO {
+  equipeId: string;
+  usuarioId: string;
+  papelMembro: string;
+}
+
+interface RemoverMembroDTO {
+  equipeId: string;
+  membroId: string;
+  usuarioId: string;
+}
+
+interface AdicionarEstudanteDTO {
+  equipeId: string;
+  estudanteId: string;
+  usuarioId: string;
+}
+
+interface RemoverEstudanteDTO {
+  equipeId: string;
+  estudanteId: string;
+  usuarioId: string;
+}
+
+interface ListarEstudantesDTO {
+  equipeId: string;
+  usuarioId: string;
+}
+
+interface ExcluirEquipeDTO {
+  id: string;
+  usuarioId: string;
+}
 
 /**
  * Controller para as rotas de equipe
@@ -9,10 +82,11 @@ export class EquipeController {
   /**
    * Listar equipes com filtros
    */
-  async listar(req: Request, res: Response): Promise<Response> {
+  async listar(req: RequestWithUser, res: Response): Promise<Response> {
     const { instituicaoId, usuarioId, tipo } = req.query;
 
-    const listarEquipesUseCase = container.resolve<IUseCase<any, any>>('ListarEquipesUseCase');
+    const listarEquipesUseCase =
+      container.resolve<IUseCase<ListarEquipesDTO, Equipe[]>>('ListarEquipesUseCase');
 
     const equipes = await listarEquipesUseCase.execute({
       instituicaoId: instituicaoId as string,
@@ -26,10 +100,11 @@ export class EquipeController {
   /**
    * Obter detalhes de uma equipe
    */
-  async detalhar(req: Request, res: Response): Promise<Response> {
+  async detalhar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const detalharEquipeUseCase = container.resolve<IUseCase<any, any>>('DetalharEquipeUseCase');
+    const detalharEquipeUseCase =
+      container.resolve<IUseCase<DetalharEquipeDTO, Equipe>>('DetalharEquipeUseCase');
 
     const equipe = await detalharEquipeUseCase.execute({
       id,
@@ -42,8 +117,9 @@ export class EquipeController {
   /**
    * Criar uma nova equipe
    */
-  async criar(req: Request, res: Response): Promise<Response> {
-    const criarEquipeUseCase = container.resolve<IUseCase<any, any>>('CriarEquipeUseCase');
+  async criar(req: RequestWithUser, res: Response): Promise<Response> {
+    const criarEquipeUseCase =
+      container.resolve<IUseCase<CriarEquipeDTO, Equipe>>('CriarEquipeUseCase');
 
     const equipe = await criarEquipeUseCase.execute({
       ...req.body,
@@ -56,10 +132,11 @@ export class EquipeController {
   /**
    * Atualizar uma equipe existente
    */
-  async atualizar(req: Request, res: Response): Promise<Response> {
+  async atualizar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const atualizarEquipeUseCase = container.resolve<IUseCase<any, any>>('AtualizarEquipeUseCase');
+    const atualizarEquipeUseCase =
+      container.resolve<IUseCase<AtualizarEquipeDTO, Equipe>>('AtualizarEquipeUseCase');
 
     const equipe = await atualizarEquipeUseCase.execute({
       id,
@@ -73,12 +150,12 @@ export class EquipeController {
   /**
    * Adicionar membro na equipe
    */
-  async adicionarMembro(req: Request, res: Response): Promise<Response> {
+  async adicionarMembro(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const adicionarMembroEquipeUseCase = container.resolve<IUseCase<any, any>>(
-      'AdicionarMembroEquipeUseCase',
-    );
+    const adicionarMembroEquipeUseCase = container.resolve<
+      IUseCase<AdicionarMembroDTO, MembroEquipe>
+    >('AdicionarMembroEquipeUseCase');
 
     const membro = await adicionarMembroEquipeUseCase.execute({
       equipeId: id,
@@ -92,10 +169,10 @@ export class EquipeController {
   /**
    * Remover membro da equipe
    */
-  async removerMembro(req: Request, res: Response): Promise<Response> {
+  async removerMembro(req: RequestWithUser, res: Response): Promise<Response> {
     const { id, membroId } = req.params;
 
-    const removerMembroEquipeUseCase = container.resolve<IUseCase<any, any>>(
+    const removerMembroEquipeUseCase = container.resolve<IUseCase<RemoverMembroDTO, void>>(
       'RemoverMembroEquipeUseCase',
     );
 
@@ -111,12 +188,12 @@ export class EquipeController {
   /**
    * Adicionar estudante à equipe
    */
-  async adicionarEstudante(req: Request, res: Response): Promise<Response> {
+  async adicionarEstudante(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const adicionarEstudanteEquipeUseCase = container.resolve<IUseCase<any, any>>(
-      'AdicionarEstudanteEquipeUseCase',
-    );
+    const adicionarEstudanteEquipeUseCase = container.resolve<
+      IUseCase<AdicionarEstudanteDTO, EstudanteEquipe>
+    >('AdicionarEstudanteEquipeUseCase');
 
     const estudanteEquipe = await adicionarEstudanteEquipeUseCase.execute({
       equipeId: id,
@@ -130,10 +207,10 @@ export class EquipeController {
   /**
    * Remover estudante da equipe
    */
-  async removerEstudante(req: Request, res: Response): Promise<Response> {
+  async removerEstudante(req: RequestWithUser, res: Response): Promise<Response> {
     const { id, estudanteId } = req.params;
 
-    const removerEstudanteEquipeUseCase = container.resolve<IUseCase<any, any>>(
+    const removerEstudanteEquipeUseCase = container.resolve<IUseCase<RemoverEstudanteDTO, void>>(
       'RemoverEstudanteEquipeUseCase',
     );
 
@@ -149,12 +226,12 @@ export class EquipeController {
   /**
    * Listar estudantes da equipe
    */
-  async listarEstudantes(req: Request, res: Response): Promise<Response> {
+  async listarEstudantes(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const listarEstudantesEquipeUseCase = container.resolve<IUseCase<any, any>>(
-      'ListarEstudantesEquipeUseCase',
-    );
+    const listarEstudantesEquipeUseCase = container.resolve<
+      IUseCase<ListarEstudantesDTO, EstudanteEquipe[]>
+    >('ListarEstudantesEquipeUseCase');
 
     const estudantes = await listarEstudantesEquipeUseCase.execute({
       equipeId: id,
@@ -167,10 +244,11 @@ export class EquipeController {
   /**
    * Excluir equipe
    */
-  async excluir(req: Request, res: Response): Promise<Response> {
+  async excluir(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const excluirEquipeUseCase = container.resolve<IUseCase<any, any>>('ExcluirEquipeUseCase');
+    const excluirEquipeUseCase =
+      container.resolve<IUseCase<ExcluirEquipeDTO, void>>('ExcluirEquipeUseCase');
 
     await excluirEquipeUseCase.execute({
       id,

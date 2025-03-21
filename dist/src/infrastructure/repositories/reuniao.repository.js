@@ -61,7 +61,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
         try {
             const reunioes = await this.unitOfWork.withoutTransaction((prisma) => prisma.reuniao.findMany({
                 where: {
-                    status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status),
+                    status: (0, enum_mappers_1.mapStatusToPrisma)(status),
                 },
                 include: this.getReuniaoIncludes(),
                 orderBy: {
@@ -92,17 +92,17 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
     async create(data) {
         try {
             const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
+                const createData = {
+                    titulo: data.titulo,
+                    equipeId: data.equipeId,
+                    data: data.data,
+                    local: data.local,
+                    status: (0, enum_mappers_1.mapStatusToPrisma)(data.status || enums_1.Status.AGENDADO),
+                    resumo: data.resumo || '',
+                    observacoes: data.observacoes || '',
+                };
                 return await prisma.reuniao.create({
-                    data: {
-                        titulo: data.titulo,
-                        equipeId: data.equipeId,
-                        data: data.data,
-                        local: data.local,
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(data.status || enums_1.Status.AGENDADO),
-                        resumo: data.resumo || '',
-                        pauta: data.pauta || '',
-                        observacoes: data.observacoes || '',
-                    },
+                    data: createData,
                     include: this.getReuniaoIncludes(),
                 });
             });
@@ -115,17 +115,17 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
     async update(id, data) {
         try {
             const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
+                const updateData = {
+                    ...(data.titulo && { titulo: data.titulo }),
+                    ...(data.data && { data: data.data }),
+                    ...(data.local && { local: data.local }),
+                    ...(data.resumo && { resumo: data.resumo }),
+                    ...(data.observacoes && { observacoes: data.observacoes }),
+                    ...(data.status && { status: (0, enum_mappers_1.mapStatusToPrisma)(data.status) }),
+                };
                 return await prisma.reuniao.update({
                     where: { id },
-                    data: {
-                        titulo: data.titulo,
-                        data: data.data,
-                        local: data.local,
-                        resumo: data.resumo,
-                        pauta: data.pauta,
-                        observacoes: data.observacoes,
-                        status: data.status ? (0, enum_mappers_1.mapLocalStatusToPrisma)(data.status) : undefined,
-                    },
+                    data: updateData,
                     include: this.getReuniaoIncludes(),
                 });
             });
@@ -175,14 +175,14 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 if (participanteExistente) {
                     throw new app_error_1.AppError('Usuário já é participante desta reunião', 409, 'PARTICIPANTE_ALREADY_EXISTS');
                 }
+                const participanteData = {
+                    reuniaoId,
+                    usuarioId,
+                    cargo: cargo || 'MEMBRO',
+                    presente: false,
+                };
                 await prisma.participanteReuniao.create({
-                    data: {
-                        reuniaoId,
-                        usuarioId,
-                        cargo: cargo || 'MEMBRO',
-                        presente: false,
-                        confirmado: false,
-                    },
+                    data: participanteData,
                 });
             });
         }
@@ -228,7 +228,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 const reuniao = await prisma.reuniao.findUnique({
                     where: { id: reuniaoId },
                 });
-                if (reuniao && (0, enum_mappers_1.mapPrismaStatusToLocal)(reuniao.status) === enums_1.Status.CONCLUIDO) {
+                if (reuniao && (0, enum_mappers_1.mapStatusFromPrisma)(reuniao.status) === enums_1.Status.CONCLUIDO) {
                     throw new app_error_1.AppError('Não é possível alterar presenças em reuniões concluídas', 400, 'REUNIAO_ALREADY_CONCLUDED');
                 }
                 await prisma.participanteReuniao.update({
@@ -237,7 +237,6 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                     },
                     data: {
                         presente,
-                        confirmado: true,
                     },
                 });
             });
@@ -261,7 +260,6 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 usuarioId: p.usuarioId,
                 reuniaoId: p.reuniaoId,
                 presente: p.presente,
-                confirmado: p.confirmado,
                 papel: p.cargo,
                 usuario: {
                     id: p.usuario.id,
@@ -338,7 +336,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                         descricao: encaminhamentoData.descricao,
                         reuniaoId: reuniaoId,
                         prioridade: prioridade,
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status),
+                        status: (0, enum_mappers_1.mapStatusToPrisma)(status),
                         dataPrazo: encaminhamentoData.prazo,
                         atribuidoPara: responsavelId,
                         criadoPor: responsavelId,
@@ -356,7 +354,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 descricao: encaminhamento.descricao,
                 responsavelId: encaminhamento.atribuidoPara,
                 prazo: encaminhamento.dataPrazo || undefined,
-                status: (0, enum_mappers_1.mapPrismaStatusToLocal)(encaminhamento.status),
+                status: (0, enum_mappers_1.mapStatusFromPrisma)(encaminhamento.status),
                 prioridade: encaminhamento.prioridade,
                 observacoes: encaminhamento.observacoes || undefined,
             };
@@ -382,7 +380,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 descricao: e.descricao,
                 responsavelId: e.atribuidoPara,
                 prazo: e.dataPrazo || undefined,
-                status: (0, enum_mappers_1.mapPrismaStatusToLocal)(e.status),
+                status: (0, enum_mappers_1.mapStatusFromPrisma)(e.status),
                 prioridade: e.prioridade,
                 observacoes: e.observacoes || undefined,
             }));
@@ -411,7 +409,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
             const reuniao = await this.unitOfWork.withTransaction(async (prisma) => {
                 return await prisma.reuniao.update({
                     where: { id: reuniaoId },
-                    data: { status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status) },
+                    data: { status: (0, enum_mappers_1.mapStatusToPrisma)(status) },
                     include: this.getReuniaoIncludes(),
                 });
             });
@@ -442,7 +440,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
             equipeId: reuniaoPrisma.equipeId,
             resumo: reuniaoPrisma.resumo,
             observacoes: reuniaoPrisma.observacoes,
-            status: (0, enum_mappers_1.mapPrismaStatusToLocal)(reuniaoPrisma.status),
+            status: (0, enum_mappers_1.mapStatusFromPrisma)(reuniaoPrisma.status),
             criadoEm: reuniaoPrisma.criadoEm,
             atualizadoEm: reuniaoPrisma.atualizadoEm,
             participantes: reuniaoPrisma.participantes?.map((p) => ({
@@ -450,7 +448,6 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 usuarioId: p.usuarioId,
                 reuniaoId: p.reuniaoId,
                 presente: p.presente,
-                confirmado: p.confirmado,
                 papel: p.cargo,
                 usuario: p.usuario,
             })) || [],
@@ -460,7 +457,7 @@ class ReuniaoRepository extends base_repository_1.BaseRepository {
                 descricao: e.descricao,
                 responsavelId: e.atribuidoPara,
                 prazo: e.dataPrazo,
-                status: (0, enum_mappers_1.mapPrismaStatusToLocal)(e.status),
+                status: (0, enum_mappers_1.mapStatusFromPrisma)(e.status),
                 prioridade: e.prioridade,
                 observacoes: e.observacoes,
             })) || [],

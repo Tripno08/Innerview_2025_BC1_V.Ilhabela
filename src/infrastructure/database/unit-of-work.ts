@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma-client';
-import { logger } from '@shared/logger';
-import PrismaTypes from '../../types/prisma';
+import { logger } from '../../shared/logger';
+import * as PrismaTypes from '../../types/prisma';
 
 /**
  * Implementação do padrão Unit of Work para gerenciar transações com Prisma

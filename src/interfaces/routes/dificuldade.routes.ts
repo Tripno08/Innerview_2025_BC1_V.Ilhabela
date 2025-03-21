@@ -51,7 +51,7 @@ dificuldadeRoutes.get(
  */
 dificuldadeRoutes.post(
   '/',
-  ValidationMiddleware.validateBody(ValidationMiddleware.schemas.dificuldade?.criacao || {}),
+  ValidationMiddleware.validateBody(ValidationMiddleware.schemas.dificuldade.criacao),
   rbacMiddleware([CargoUsuario.COORDENADOR, CargoUsuario.ESPECIALISTA, CargoUsuario.ADMIN]),
   dificuldadeController.criar,
 );

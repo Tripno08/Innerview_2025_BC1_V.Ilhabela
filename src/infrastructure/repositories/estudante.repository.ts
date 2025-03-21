@@ -1,18 +1,27 @@
 import {
   IEstudanteRepository,
   AvaliacaoEstudante,
-} from '@domain/repositories/estudante-repository.interface';
-import { Estudante } from '@domain/entities/estudante.entity';
+} from '../../domain/repositories/estudante-repository.interface';
+import { Estudante, AvaliacaoProps } from '../../domain/entities/estudante.entity';
 import {
   DificuldadeAprendizagem,
   TipoDificuldade,
-} from '@domain/entities/dificuldade-aprendizagem.entity';
+  CategoriaDificuldade,
+} from '../../domain/entities/dificuldade-aprendizagem.entity';
 import { BaseRepository } from './base.repository';
-import { Status } from '@shared/enums';
-import { AppError } from '@shared/errors/app-error';
+import { Status, Nivel } from '../../shared/enums';
+import { AppError } from '../../shared/errors/app-error';
 import { injectable } from 'tsyringe';
 import { UnitOfWork } from '../database/unit-of-work';
-import { mapLocalStatusToPrisma } from '@shared/utils/enum-mappers';
+import { mapStatusToPrisma } from '../../shared/utils/enum-mappers';
+import { Prisma } from '@prisma/client';
+
+/**
+ * Tipo estendido para o Prisma com metadados
+ */
+type AvaliacaoWithMetadata = Prisma.AvaliacaoCreateInput & {
+  metadados?: Record<string, unknown>;
+};
 
 /**
  * Implementação do repositório de estudantes utilizando Prisma
@@ -37,7 +46,7 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }),
       );
 
-      return estudantes.map((e) => this.mapToEstudante(e));
+      return (estudantes as any[]).map((e) => this.mapToEstudante(e));
     } catch (error) {
       this.handlePrismaError(error, 'Estudante');
     }
@@ -58,7 +67,7 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }),
       );
 
-      return estudantes.map((e) => this.mapToEstudante(e));
+      return (estudantes as any[]).map((e) => this.mapToEstudante(e));
     } catch (error) {
       this.handlePrismaError(error, 'Estudante');
     }
@@ -89,23 +98,75 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
   /**
    * Adaptar dados de entidade para o formato do Prisma
    */
-  private adaptToPrismaCreate(data: Partial<Estudante>): any {
+  private adaptToPrismaCreate(data: Partial<Estudante>): Prisma.EstudanteCreateInput {
+    // Remover propriedades complexas que Prisma não aceita diretamente
     const { status, ...restData } = data;
-    return {
-      ...restData,
-      ...(status && { status: mapLocalStatusToPrisma(status) }),
+
+    // Omitir propriedades complexas
+    const dadosSemPropriedadesComplexas = this.removerPropriedadesEntidade(restData);
+
+    // Construir o objeto aceitável pelo Prisma
+    const resultado: Record<string, unknown> = {
+      ...dadosSemPropriedadesComplexas,
     };
+
+    if (status) {
+      resultado.status = mapStatusToPrisma(status);
+    }
+
+    return resultado as unknown as Prisma.EstudanteCreateInput;
   }
 
   /**
    * Adaptar dados de atualização para o formato do Prisma
    */
-  private adaptToPrismaUpdate(data: Partial<Omit<Estudante, 'id'>>): any {
+  private adaptToPrismaUpdate(data: Partial<Omit<Estudante, 'id'>>): Prisma.EstudanteUpdateInput {
+    // Remover propriedades complexas que Prisma não aceita diretamente
     const { status, ...restData } = data;
-    return {
-      ...restData,
-      ...(status && { status: mapLocalStatusToPrisma(status) }),
+
+    // Omitir propriedades complexas
+    const dadosSemPropriedadesComplexas = this.removerPropriedadesEntidade(restData);
+
+    // Construir o objeto aceitável pelo Prisma
+    const resultado: Record<string, unknown> = {
+      ...dadosSemPropriedadesComplexas,
     };
+
+    if (status) {
+      resultado.status = mapStatusToPrisma(status);
+    }
+
+    return resultado as unknown as Prisma.EstudanteUpdateInput;
+  }
+
+  /**
+   * Remove propriedades de entidade que o Prisma não aceita diretamente
+   */
+  private removerPropriedadesEntidade(data: Record<string, unknown>): Record<string, unknown> {
+    // Lista de propriedades que devem ser excluídas do objeto enviado ao Prisma
+    const propsParaRemover = [
+      'calcularIdade',
+      'calcularMediaAvaliacoes',
+      'estaAtivo',
+      'inativar',
+      'possuiDificuldadeGrave',
+      'adicionarAvaliacao',
+      'adicionarDificuldade',
+      'atualizar',
+      'removerDificuldade',
+      'dificuldades',
+      'avaliacoes',
+    ];
+
+    const resultado = { ...data };
+
+    for (const prop of propsParaRemover) {
+      if (prop in resultado) {
+        delete resultado[prop];
+      }
+    }
+
+    return resultado;
   }
 
   /**
@@ -226,10 +287,12 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }
 
         // Criar a associação com os dados adicionais, se fornecidos
-        const createData: any = {
-          estudanteId,
-          dificuldadeId,
-          nivel: 'LEVE', // Valor padrão obrigatório
+        const createData: Omit<Prisma.EstudanteDificuldadeCreateInput, 'tipo'> & {
+          tipo?: string;
+        } = {
+          estudante: { connect: { id: estudanteId } },
+          dificuldade: { connect: { id: dificuldadeId } },
+          nivel: Nivel.BAIXO, // Usando o enum correto do sistema
         };
 
         if (dadosAdicionais?.tipo) {
@@ -241,7 +304,7 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }
 
         await prisma.estudanteDificuldade.create({
-          data: createData,
+          data: createData as Prisma.EstudanteDificuldadeCreateInput,
         });
       });
 
@@ -320,10 +383,17 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }
 
         // Adaptar os dados para o formato esperado pelo Prisma
-        const prismaAvaliacaoData: any = {
-          ...avaliacaoData,
-          estudanteId,
+        const prismaAvaliacaoData: AvaliacaoWithMetadata = {
+          estudante: { connect: { id: estudanteId } },
           data: avaliacaoData.data || new Date(),
+          tipo: avaliacaoData.tipo,
+          pontuacao: avaliacaoData.pontuacao || 0,
+          observacoes: avaliacaoData.observacoes,
+          metadados: {
+            avaliadorId: avaliacaoData.avaliadorId,
+            ...(avaliacaoData.disciplina && { disciplina: avaliacaoData.disciplina }),
+            ...(avaliacaoData.conteudo && { conteudo: avaliacaoData.conteudo }),
+          },
         };
 
         // Adicionar a avaliação
@@ -365,7 +435,7 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
         }),
       );
 
-      return estudantes.map((e) => this.mapToEstudante(e));
+      return (estudantes as any[]).map((e) => this.mapToEstudante(e));
     } catch (error) {
       this.handlePrismaError(error, 'Estudante');
     }
@@ -395,38 +465,87 @@ export class EstudanteRepository extends BaseRepository<Estudante> implements IE
   /**
    * Método para mapear um estudante do Prisma para a entidade Estudante
    */
-  private mapToEstudante(estudantePrisma: any): Estudante {
+  private mapToEstudante(estudantePrisma: unknown): Estudante {
+    const data = estudantePrisma as Record<string, unknown>;
+
     // Mapear dificuldades
-    const dificuldades = Array.isArray(estudantePrisma.dificuldades)
-      ? estudantePrisma.dificuldades.map((rel: any) =>
-          DificuldadeAprendizagem.restaurar({
-            ...rel.dificuldade,
-            tipo:
-              rel.dificuldade.categoria === 'LEITURA'
-                ? TipoDificuldade.LEITURA
-                : rel.dificuldade.categoria === 'ESCRITA'
-                  ? TipoDificuldade.ESCRITA
-                  : rel.dificuldade.categoria === 'MATEMATICA'
-                    ? TipoDificuldade.MATEMATICA
-                    : TipoDificuldade.OUTRO,
-          }),
-        )
+    const dificuldades = Array.isArray(data.dificuldades)
+      ? data.dificuldades.map((rel) => {
+          const relData = rel as Record<string, unknown>;
+          const difData = relData.dificuldade as Record<string, unknown>;
+
+          // Converter sintomas para o formato correto considerando que no Prisma pode estar como string
+          let sintomasProcessados: string;
+          if (typeof difData.sintomas === 'string') {
+            sintomasProcessados = difData.sintomas;
+          } else if (Array.isArray(difData.sintomas)) {
+            sintomasProcessados = difData.sintomas.join(', ');
+          } else {
+            sintomasProcessados = '';
+          }
+
+          // Determinar o tipo com base na categoria
+          let tipo = TipoDificuldade.OUTRO;
+          const categoria = difData.categoria as string;
+          if (categoria === 'LEITURA') {
+            tipo = TipoDificuldade.LEITURA;
+          } else if (categoria === 'ESCRITA') {
+            tipo = TipoDificuldade.ESCRITA;
+          } else if (categoria === 'MATEMATICA') {
+            tipo = TipoDificuldade.MATEMATICA;
+          }
+
+          // Mapear categoria para o enum corretamente
+          // Usar um valor padrão seguro se não conseguir mapear corretamente
+          let categoriaMapeada = 'LEVE' as unknown as CategoriaDificuldade;
+
+          try {
+            if (['LEVE', 'MODERADA', 'GRAVE'].includes(categoria)) {
+              categoriaMapeada = categoria as unknown as CategoriaDificuldade;
+            }
+          } catch (error) {
+            // Em caso de erro, manter o valor padrão
+          }
+
+          return DificuldadeAprendizagem.restaurar({
+            id: difData.id as string,
+            nome: difData.nome as string,
+            descricao: difData.descricao as string,
+            sintomas: sintomasProcessados,
+            categoria: categoriaMapeada,
+            tipo: tipo,
+          });
+        })
+      : [];
+
+    // Mapear avaliações
+    const avaliacoes = Array.isArray(data.avaliacoes)
+      ? data.avaliacoes.map((aval) => {
+          const avalData = aval as Record<string, unknown>;
+          return {
+            id: avalData.id as string,
+            data: avalData.data as Date,
+            tipo: avalData.tipo as string,
+            pontuacao: Number(avalData.pontuacao || 0),
+            observacoes: avalData.observacoes as string | undefined,
+            criadoEm: avalData.criadoEm as Date,
+            atualizadoEm: avalData.atualizadoEm as Date,
+          } as AvaliacaoProps;
+        })
       : [];
 
     // Criar a entidade Estudante
     return Estudante.restaurar({
-      id: estudantePrisma.id as string,
-      nome: estudantePrisma.nome as string,
-      serie: estudantePrisma.serie as string,
-      dataNascimento: estudantePrisma.dataNascimento as Date,
-      status: estudantePrisma.status as Status,
-      usuarioId: estudantePrisma.usuarioId as string,
+      id: data.id as string,
+      nome: data.nome as string,
+      serie: data.serie as string,
+      dataNascimento: data.dataNascimento as Date,
+      status: data.status as Status,
+      usuarioId: data.usuarioId as string,
       dificuldades,
-      avaliacoes: (Array.isArray(estudantePrisma.avaliacoes)
-        ? estudantePrisma.avaliacoes
-        : []) as any[],
-      criadoEm: estudantePrisma.criadoEm as Date,
-      atualizadoEm: estudantePrisma.atualizadoEm as Date,
+      avaliacoes,
+      criadoEm: data.criadoEm as Date,
+      atualizadoEm: data.atualizadoEm as Date,
     });
   }
 }

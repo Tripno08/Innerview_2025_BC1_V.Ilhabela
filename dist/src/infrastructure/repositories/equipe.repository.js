@@ -78,7 +78,7 @@ let EquipeRepository = class EquipeRepository extends base_repository_1.BaseRepo
                 const createData = {
                     nome,
                     descricao,
-                    status: (0, enum_mappers_1.mapLocalStatusToPrisma)(statusInput || enums_1.Status.ATIVO),
+                    status: (0, enum_mappers_1.mapStatusToPrisma)(statusInput || enums_1.Status.ATIVO),
                     ativo: ativo !== undefined ? ativo : true,
                     ...outrosDados,
                 };
@@ -99,7 +99,7 @@ let EquipeRepository = class EquipeRepository extends base_repository_1.BaseRepo
                 const { status: statusInput, ...outrosDados } = data;
                 const updateData = { ...outrosDados };
                 if (statusInput) {
-                    updateData.status = (0, enum_mappers_1.mapLocalStatusToPrisma)(statusInput);
+                    updateData.status = (0, enum_mappers_1.mapStatusToPrisma)(statusInput);
                 }
                 return await prisma.equipe.update({
                     where: { id },
@@ -447,7 +447,7 @@ let EquipeRepository = class EquipeRepository extends base_repository_1.BaseRepo
             id: data.id,
             nome: data.nome,
             descricao: data.descricao || '',
-            status: (0, enum_mappers_1.mapPrismaStatusToLocal)(data.status),
+            status: (0, enum_mappers_1.mapStatusFromPrisma)(data.status),
             membros: membrosProps,
             estudantes: estudantesProps,
             criadoEm: data.criadoEm,

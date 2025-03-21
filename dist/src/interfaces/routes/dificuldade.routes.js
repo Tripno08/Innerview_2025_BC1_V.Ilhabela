@@ -23,7 +23,7 @@ dificuldadeRoutes.get('/:id', validation_middleware_1.ValidationMiddleware.valid
     cargo_enum_1.CargoUsuario.ESPECIALISTA,
     cargo_enum_1.CargoUsuario.ADMIN,
 ]), dificuldadeController.detalhar);
-dificuldadeRoutes.post('/', validation_middleware_1.ValidationMiddleware.validateBody(validation_middleware_1.ValidationMiddleware.schemas.dificuldade?.criacao || {}), (0, rbac_middleware_1.rbacMiddleware)([cargo_enum_1.CargoUsuario.COORDENADOR, cargo_enum_1.CargoUsuario.ESPECIALISTA, cargo_enum_1.CargoUsuario.ADMIN]), dificuldadeController.criar);
+dificuldadeRoutes.post('/', validation_middleware_1.ValidationMiddleware.validateBody(validation_middleware_1.ValidationMiddleware.schemas.dificuldade.criacao), (0, rbac_middleware_1.rbacMiddleware)([cargo_enum_1.CargoUsuario.COORDENADOR, cargo_enum_1.CargoUsuario.ESPECIALISTA, cargo_enum_1.CargoUsuario.ADMIN]), dificuldadeController.criar);
 dificuldadeRoutes.put('/:id', validation_middleware_1.ValidationMiddleware.validateParams(validation_middleware_1.ValidationMiddleware.schemas.id), (0, rbac_middleware_1.rbacMiddleware)([cargo_enum_1.CargoUsuario.COORDENADOR, cargo_enum_1.CargoUsuario.ESPECIALISTA, cargo_enum_1.CargoUsuario.ADMIN]), dificuldadeController.atualizar);
 dificuldadeRoutes.post('/:id/estudantes/:estudanteId', validation_middleware_1.ValidationMiddleware.validateParams({
     id: validation_middleware_1.ValidationMiddleware.schemas.id,

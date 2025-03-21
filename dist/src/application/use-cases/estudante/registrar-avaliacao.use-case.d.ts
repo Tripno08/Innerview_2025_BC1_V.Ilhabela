@@ -1,5 +1,5 @@
-import { IEstudanteRepository } from '@domain/repositories/estudante-repository.interface';
-import { Estudante, Avaliacao } from '@domain/entities/estudante.entity';
+import { IEstudanteRepository, AvaliacaoEstudante } from '../../../domain/repositories/estudante-repository.interface';
+import { Estudante, Avaliacao } from '../../../domain/entities/estudante.entity';
 interface RegistrarAvaliacaoDTO {
     estudanteId: string;
     avaliadorId: string;
@@ -12,7 +12,7 @@ interface RegistrarAvaliacaoDTO {
 }
 interface RegistrarAvaliacaoResultado {
     estudante: Estudante;
-    avaliacao: Avaliacao;
+    avaliacao: Avaliacao | AvaliacaoEstudante;
 }
 export declare class RegistrarAvaliacaoUseCase {
     private readonly estudanteRepository;

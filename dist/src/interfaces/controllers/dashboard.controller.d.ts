@@ -1,14 +1,24 @@
 import { Request, Response } from 'express';
-export declare class DashboardController {
-    obterIndicadores(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasEstudantes(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasDificuldades(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasIntervencoes(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasReunioes(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasProgresso(req: Request, res: Response): Promise<Response>;
-    obterEstatisticasDesempenho(req: Request, res: Response): Promise<Response>;
-    obterTendenciasAprendizagem(req: Request, res: Response): Promise<Response>;
-    gerarRelatorioEstudante(req: Request, res: Response): Promise<Response>;
-    gerarRelatorioIntervencoes(req: Request, res: Response): Promise<Response>;
-    gerarRelatorioEquipe(req: Request, res: Response): Promise<Response>;
+import { CargoUsuario } from '../../shared/enums';
+interface RequestWithUser extends Request {
+    user: {
+        id: string;
+        email: string;
+        cargo: CargoUsuario;
+        nome?: string;
+    };
 }
+export declare class DashboardController {
+    obterIndicadores(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasEstudantes(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasDificuldades(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasIntervencoes(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasReunioes(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasProgresso(req: RequestWithUser, res: Response): Promise<Response>;
+    obterEstatisticasDesempenho(req: RequestWithUser, res: Response): Promise<Response>;
+    obterTendenciasAprendizagem(req: RequestWithUser, res: Response): Promise<Response>;
+    gerarRelatorioEstudante(req: RequestWithUser, res: Response): Promise<Response>;
+    gerarRelatorioIntervencoes(req: RequestWithUser, res: Response): Promise<Response>;
+    gerarRelatorioEquipe(req: RequestWithUser, res: Response): Promise<Response>;
+}
+export {};

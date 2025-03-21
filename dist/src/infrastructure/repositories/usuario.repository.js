@@ -11,7 +11,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
             id: usuarioPrisma.id,
             nome: usuarioPrisma.nome,
             email: usuarioPrisma.email,
-            cargo: (0, enum_mappers_1.mapPrismaCargoToLocal)(usuarioPrisma.cargo),
+            cargo: (0, enum_mappers_1.mapCargoFromPrisma)(usuarioPrisma.cargo),
             criadoEm: usuarioPrisma.criadoEm || new Date(),
             atualizadoEm: usuarioPrisma.atualizadoEm || new Date(),
         });
@@ -84,7 +84,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                     data: {
                         nome: data.nome,
                         email: data.email,
-                        cargo: (0, enum_mappers_1.mapLocalCargoToPrisma)(data.cargo || enums_1.CargoUsuario.PROFESSOR),
+                        cargo: (0, enum_mappers_1.mapCargoToPrisma)(data.cargo || enums_1.CargoUsuario.PROFESSOR),
                         senha: data.senha,
                     },
                 });
@@ -103,7 +103,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                 ...(data.email && { email: data.email }),
             };
             if (data.cargo) {
-                prismaData.cargo = (0, enum_mappers_1.mapLocalCargoToPrisma)(data.cargo);
+                prismaData.cargo = (0, enum_mappers_1.mapCargoToPrisma)(data.cargo);
             }
             const usuario = await this.unitOfWork.withTransaction(async (prisma) => {
                 const existente = await prisma.usuario.findUnique({
@@ -121,7 +121,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                 id: usuario.id,
                 nome: usuario.nome,
                 email: usuario.email,
-                cargo: (0, enum_mappers_1.mapPrismaCargoToLocal)(usuario.cargo),
+                cargo: (0, enum_mappers_1.mapCargoFromPrisma)(usuario.cargo),
                 criadoEm: usuario.criadoEm || new Date(),
                 atualizadoEm: usuario.atualizadoEm || new Date(),
             });
@@ -170,10 +170,10 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                     },
                 });
                 if (associacaoExistente) {
-                    if (cargo && associacaoExistente.cargo !== (0, enum_mappers_1.mapLocalCargoToPrisma)(cargo)) {
+                    if (cargo && associacaoExistente.cargo !== (0, enum_mappers_1.mapCargoToPrisma)(cargo)) {
                         await prisma.usuarioInstituicao.update({
                             where: { id: associacaoExistente.id },
-                            data: { cargo: (0, enum_mappers_1.mapLocalCargoToPrisma)(cargo) },
+                            data: { cargo: (0, enum_mappers_1.mapCargoToPrisma)(cargo) },
                         });
                     }
                     return;
@@ -182,7 +182,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                     data: {
                         usuarioId,
                         instituicaoId,
-                        cargo: (0, enum_mappers_1.mapLocalCargoToPrisma)(cargo || enums_1.CargoUsuario.PROFESSOR),
+                        cargo: (0, enum_mappers_1.mapCargoToPrisma)(cargo || enums_1.CargoUsuario.PROFESSOR),
                     },
                 });
             });
@@ -225,7 +225,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
                     id: a.id,
                     usuarioId: a.usuarioId,
                     instituicaoId: a.instituicaoId,
-                    cargo: (0, enum_mappers_1.mapPrismaCargoToLocal)(a.cargo),
+                    cargo: (0, enum_mappers_1.mapCargoFromPrisma)(a.cargo),
                     ativo: a.ativo,
                     criadoEm: a.criadoEm,
                     atualizadoEm: a.atualizadoEm,
@@ -253,7 +253,7 @@ class UsuarioRepository extends base_repository_1.BaseRepository {
             }
             return {
                 pertence: true,
-                cargo: (0, enum_mappers_1.mapPrismaCargoToLocal)(associacao.cargo),
+                cargo: (0, enum_mappers_1.mapCargoFromPrisma)(associacao.cargo),
             };
         }
         catch (error) {

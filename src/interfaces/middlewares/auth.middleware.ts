@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verify, JwtPayload } from 'jsonwebtoken';
 import { AppError } from '@shared/errors/app-error';
-import { mapPrismaCargoToLocal } from '@shared/utils/enum-mappers';
-import { CargoUsuario } from '@shared/enums';
+import { mapCargoFromPrisma } from '@shared/utils/enum-mappers';
 
 interface TokenPayload extends JwtPayload {
   email: string;
@@ -29,7 +28,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     const decoded = verify(token, process.env.JWT_SECRET) as TokenPayload;
 
     // Converter o cargo para o enum local
-    const cargoLocal = mapPrismaCargoToLocal(decoded.cargo);
+    const cargoLocal = mapCargoFromPrisma(decoded.cargo);
 
     // Adicionar informações do usuário ao request
     req.user = {

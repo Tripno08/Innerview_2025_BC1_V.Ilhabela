@@ -7,7 +7,7 @@ import {
 import { BaseRepository } from './base.repository';
 import { Usuario } from '@domain/entities/usuario.entity';
 import { CargoUsuario } from '@shared/enums';
-import { mapLocalCargoToPrisma, mapPrismaCargoToLocal } from '@shared/utils/enum-mappers';
+import { mapCargoToPrisma, mapCargoFromPrisma } from '@shared/utils/enum-mappers';
 
 /**
  * Repositório de usuários utilizando Prisma
@@ -21,7 +21,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
       id: usuarioPrisma.id,
       nome: usuarioPrisma.nome,
       email: usuarioPrisma.email,
-      cargo: mapPrismaCargoToLocal(usuarioPrisma.cargo),
+      cargo: mapCargoFromPrisma(usuarioPrisma.cargo),
       criadoEm: usuarioPrisma.criadoEm || new Date(),
       atualizadoEm: usuarioPrisma.atualizadoEm || new Date(),
     });
@@ -105,7 +105,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
 
       // Criar uma instância da entidade Usuario
       const usuarioBase = this.mapToUsuario(usuario);
-      
+
       // Criar uma instancia compatível com UsuarioComCredenciais
       const usuarioComCredenciais: UsuarioComCredenciais = Object.assign(
         Object.create(Object.getPrototypeOf(usuarioBase)),
@@ -113,7 +113,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
           ...usuarioBase,
           senha: usuario.senha || '',
           salt: '',
-        }
+        },
       );
 
       return usuarioComCredenciais;
@@ -133,11 +133,11 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
           data: {
             nome: data.nome,
             email: data.email,
-            cargo: mapLocalCargoToPrisma(data.cargo || CargoUsuario.PROFESSOR),
+            cargo: mapCargoToPrisma(data.cargo || CargoUsuario.PROFESSOR),
             senha: data.senha,
           },
         });
-        
+
         return novoUsuario;
       });
 
@@ -159,7 +159,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
       };
 
       if (data.cargo) {
-        prismaData.cargo = mapLocalCargoToPrisma(data.cargo);
+        prismaData.cargo = mapCargoToPrisma(data.cargo);
       }
 
       const usuario = await this.unitOfWork.withTransaction(async (prisma) => {
@@ -184,7 +184,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        cargo: mapPrismaCargoToLocal(usuario.cargo),
+        cargo: mapCargoFromPrisma(usuario.cargo),
         criadoEm: usuario.criadoEm || new Date(),
         atualizadoEm: usuario.atualizadoEm || new Date(),
       });
@@ -256,10 +256,10 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
 
         if (associacaoExistente) {
           // Se existir e o cargo for diferente, atualizar
-          if (cargo && associacaoExistente.cargo !== mapLocalCargoToPrisma(cargo)) {
+          if (cargo && associacaoExistente.cargo !== mapCargoToPrisma(cargo)) {
             await prisma.usuarioInstituicao.update({
               where: { id: associacaoExistente.id },
-              data: { cargo: mapLocalCargoToPrisma(cargo) },
+              data: { cargo: mapCargoToPrisma(cargo) },
             });
           }
           return;
@@ -270,7 +270,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
           data: {
             usuarioId,
             instituicaoId,
-            cargo: mapLocalCargoToPrisma(cargo || CargoUsuario.PROFESSOR),
+            cargo: mapCargoToPrisma(cargo || CargoUsuario.PROFESSOR),
           },
         });
       });
@@ -324,7 +324,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
           id: a.id,
           usuarioId: a.usuarioId,
           instituicaoId: a.instituicaoId,
-          cargo: mapPrismaCargoToLocal(a.cargo),
+          cargo: mapCargoFromPrisma(a.cargo),
           ativo: a.ativo,
           criadoEm: a.criadoEm,
           atualizadoEm: a.atualizadoEm,
@@ -360,7 +360,7 @@ export class UsuarioRepository extends BaseRepository<Usuario> implements IUsuar
 
       return {
         pertence: true,
-        cargo: mapPrismaCargoToLocal(associacao.cargo),
+        cargo: mapCargoFromPrisma(associacao.cargo),
       };
     } catch (error) {
       this.handlePrismaError(error, 'Verificação de pertencimento');

@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EstudanteController = void 0;
 const tsyringe_1 = require("tsyringe");
-const app_error_1 = require("@shared/errors/app-error");
 class EstudanteController {
     async cadastrar(req, res) {
         const { nome, serie, dataNascimento } = req.body;
@@ -27,10 +26,7 @@ class EstudanteController {
     }
     async registrarAvaliacao(req, res) {
         const { estudanteId, data, tipo, pontuacao, observacoes } = req.body;
-        const avaliadorId = req.usuario?.id;
-        if (!avaliadorId) {
-            throw new app_error_1.AppError('Usuário não autenticado', 401);
-        }
+        const avaliadorId = req.user.id;
         const registrarAvaliacaoUseCase = tsyringe_1.container.resolve('RegistrarAvaliacaoUseCase');
         const resultado = await registrarAvaliacaoUseCase.execute({
             estudanteId,
@@ -65,10 +61,7 @@ class EstudanteController {
         return res.status(200).json(estudantes);
     }
     async listarPorUsuario(req, res) {
-        const usuarioId = req.usuario?.id;
-        if (!usuarioId) {
-            throw new app_error_1.AppError('Usuário não autenticado', 401);
-        }
+        const usuarioId = req.user.id;
         const estudanteRepository = tsyringe_1.container.resolve('EstudanteRepository');
         const estudantes = await estudanteRepository.findByUsuarioId(usuarioId);
         return res.json(estudantes);

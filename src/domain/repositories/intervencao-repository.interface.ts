@@ -1,8 +1,8 @@
 import {
-  CatalogoIntervencao,
   Intervencao,
   TipoIntervencao,
-} from '@domain/entities/intervencao.entity';
+  CatalogoIntervencao,
+} from '../entities/intervencao.entity';
 
 /**
  * Interface para repositório de intervenções

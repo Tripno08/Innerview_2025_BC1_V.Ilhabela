@@ -46,15 +46,15 @@ class IntervencaoController {
     }
     async registrarProgresso(req, res) {
         const { id } = req.params;
-        const { valor, observacao } = req.body;
+        const { progresso, observacao } = req.body;
         const registrarProgressoIntervencaoUseCase = tsyringe_1.container.resolve('RegistrarProgressoIntervencaoUseCase');
-        const progresso = await registrarProgressoIntervencaoUseCase.execute({
+        const intervencao = await registrarProgressoIntervencaoUseCase.execute({
             intervencaoId: id,
-            valor,
+            progresso,
             observacao,
             usuarioId: req.user.id,
         });
-        return res.json(progresso);
+        return res.json(intervencao);
     }
     async avaliarEficacia(req, res) {
         const { id } = req.params;

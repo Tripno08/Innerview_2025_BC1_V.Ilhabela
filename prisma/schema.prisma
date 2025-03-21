@@ -87,6 +87,7 @@ model Avaliacao {
   tipo         String
   pontuacao    Float
   observacoes  String?   @db.Text
+  metadados    Json?
   criadoEm     DateTime  @default(now())
   atualizadoEm DateTime  @updatedAt
   estudanteId  String
@@ -388,6 +389,8 @@ model DificuldadeAprendizagem {
   descricao             String                   @db.Text
   sintomas              String                   @db.Text
   categoria             CategoriaDificuldade
+  status                Status                   @default(ATIVO)
+  metadados             Json?
   criadoEm              DateTime                 @default(now())
   atualizadoEm          DateTime                 @updatedAt
   intervencoes          DificuldadeIntervencao[]

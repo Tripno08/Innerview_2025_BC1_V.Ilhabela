@@ -1,29 +1,23 @@
-import { IDificuldadeRepository } from '@domain/repositories/dificuldade-repository.interface';
+import { IDificuldadeRepository } from '../../domain/repositories/dificuldade-repository.interface';
 import {
   DificuldadeAprendizagem,
   TipoDificuldade,
   CategoriaDificuldade,
-} from '@domain/entities/dificuldade-aprendizagem.entity';
+} from '../../domain/entities/dificuldade-aprendizagem.entity';
 import { BaseRepository } from './base.repository';
-import { Status } from '@shared/enums';
-import { mapLocalStatusToPrisma, mapPrismaStatusToLocal } from '@shared/utils/enum-mappers';
+import { Status } from '../../shared/enums';
+import { mapStatusToPrisma, mapStatusFromPrisma } from '../../shared/utils/enum-mappers';
 import { injectable } from 'tsyringe';
 import { UnitOfWork } from '../database/unit-of-work';
+import { Prisma, CategoriaDificuldade as PrismaCategoriaDificuldade } from '@prisma/client';
 
 /**
- * Interface para os dados retornados do Prisma
+ * Tipo estendido para incluir os campos adicionados no schema
  */
-interface DificuldadeAprendizagemData {
-  id: string;
-  nome: string;
-  descricao: string;
-  sintomas?: string | null;
-  tipo: string;
-  categoria: string;
-  status: string;
-  criadoEm: Date;
-  atualizadoEm: Date;
-}
+type DificuldadeAprendizagemWithMetadata = Prisma.DificuldadeAprendizagemCreateInput & {
+  metadados?: Record<string, string>;
+  status?: any;
+};
 
 /**
  * Implementação do repositório de dificuldades de aprendizagem utilizando Prisma
@@ -38,7 +32,7 @@ export class DificuldadeRepository
   }
 
   /**
-   * Encontrar todas as dificuldades de aprendizagem
+   * Encontrar todas as dificuldades
    */
   async findAll(): Promise<DificuldadeAprendizagem[]> {
     try {
@@ -50,14 +44,14 @@ export class DificuldadeRepository
         }),
       );
 
-      return dificuldades.map((d) => this.mapToDificuldade(d));
+      return (dificuldades as any[]).map((d) => this.mapToDificuldade(d));
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
   }
 
   /**
-   * Encontrar por ID
+   * Encontrar dificuldade por ID
    */
   async findById(id: string): Promise<DificuldadeAprendizagem | null> {
     try {
@@ -71,51 +65,26 @@ export class DificuldadeRepository
         return null;
       }
 
-      return this.mapToDificuldade(dificuldade);
+      return this.mapToDificuldade(dificuldade as Record<string, unknown>);
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
   }
 
   /**
-   * Encontrar por tipo
+   * Encontrar dificuldades por tipo
    */
   async findByTipo(tipo: TipoDificuldade): Promise<DificuldadeAprendizagem[]> {
     try {
-      // Mapeamento entre TipoDificuldade do domínio e CategoriaDificuldade do Prisma
-      let categoria: string;
-
-      // Converter o tipo para a categoria correspondente no banco de dados
-      switch (tipo) {
-        case TipoDificuldade.LEITURA:
-          categoria = 'LEITURA';
-          break;
-        case TipoDificuldade.ESCRITA:
-          categoria = 'ESCRITA';
-          break;
-        case TipoDificuldade.MATEMATICA:
-          categoria = 'MATEMATICA';
-          break;
-        case TipoDificuldade.COMPORTAMENTAL:
-          categoria = 'COMPORTAMENTO';
-          break;
-        case TipoDificuldade.ATENCAO:
-          categoria = 'ATENCAO';
-          break;
-        case TipoDificuldade.SOCIAL:
-          categoria = 'COMUNICACAO';
-          break;
-        case TipoDificuldade.NEUROMOTORA:
-          categoria = 'COORDENACAO_MOTORA';
-          break;
-        default:
-          categoria = 'OUTRO';
-      }
-
+      // Usar filtro customizado se o schema de Prisma não tiver campo 'tipo'
       const dificuldades = await this.unitOfWork.withoutTransaction((prisma) =>
         prisma.dificuldadeAprendizagem.findMany({
           where: {
-            categoria: categoria as any,
+            // Filtragem customizada usando propriedades existentes no schema
+            // ou outros critérios dependendo de como os tipos são armazenados
+            categoria: {
+              equals: this.mapTipoToCategoria(tipo),
+            },
           },
           orderBy: {
             nome: 'asc',
@@ -123,7 +92,29 @@ export class DificuldadeRepository
         }),
       );
 
-      return dificuldades.map((d) => this.mapToDificuldade(d));
+      return (dificuldades as any[]).map((d) => this.mapToDificuldade(d));
+    } catch (error) {
+      this.handlePrismaError(error, 'Dificuldade');
+    }
+  }
+
+  /**
+   * Encontrar dificuldades por categoria
+   */
+  async findByCategoria(categoria: CategoriaDificuldade): Promise<DificuldadeAprendizagem[]> {
+    try {
+      const dificuldades = await this.unitOfWork.withoutTransaction((prisma) =>
+        prisma.dificuldadeAprendizagem.findMany({
+          where: {
+            categoria: this.mapCategoriaParaPrisma(categoria),
+          },
+          orderBy: {
+            nome: 'asc',
+          },
+        }),
+      );
+
+      return (dificuldades as any[]).map((d) => this.mapToDificuldade(d));
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
@@ -134,7 +125,7 @@ export class DificuldadeRepository
    */
   async findByEstudanteId(estudanteId: string): Promise<DificuldadeAprendizagem[]> {
     try {
-      const dificuldades = await this.unitOfWork.withoutTransaction((prisma) =>
+      const associacoes = await this.unitOfWork.withoutTransaction((prisma) =>
         prisma.estudanteDificuldade.findMany({
           where: { estudanteId },
           include: {
@@ -143,97 +134,106 @@ export class DificuldadeRepository
         }),
       );
 
-      return dificuldades.map((rel) => this.mapToDificuldade(rel.dificuldade));
+      return (associacoes as any[]).map((assoc) => this.mapToDificuldade(assoc.dificuldade));
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
   }
 
   /**
-   * Criar uma nova dificuldade
+   * Criar uma nova dificuldade de aprendizagem
    */
   async create(data: Record<string, unknown>): Promise<DificuldadeAprendizagem> {
     try {
-      const dificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
-        // Extrair e tipar corretamente os campos necessários
-        const {
-          nome,
-          descricao,
-          sintomas,
-          tipo,
-          categoria,
-          status: statusInput,
-          ...restData
-        } = data as {
-          nome: string;
-          descricao: string;
-          sintomas?: string;
-          tipo: TipoDificuldade;
-          categoria: CategoriaDificuldade;
-          status?: Status;
-        };
+      const { nome, descricao, sintomas, tipo, categoria, statusInput } = data;
 
-        // Converter enum para string para o banco
-        const createData = {
-          nome,
-          descricao,
-          sintomas: sintomas || '',
+      if (!nome || !categoria) {
+        throw new Error('Nome e categoria são obrigatórios para criar dificuldade de aprendizagem');
+      }
+
+      // Criar dados compatíveis com o schema do Prisma
+      const createData: DificuldadeAprendizagemWithMetadata = {
+        nome: String(nome),
+        descricao: descricao ? String(descricao) : '',
+        sintomas: sintomas ? String(sintomas) : '',
+        categoria: this.mapCategoriaParaPrisma(categoria as CategoriaDificuldade),
+        status: mapStatusToPrisma((statusInput as Status) || Status.ATIVO),
+      };
+
+      // Adicionar metadados para armazenar o tipo se não existir no schema
+      if (tipo) {
+        createData.metadados = {
           tipo: String(tipo),
-          categoria: String(categoria),
-          status: mapLocalStatusToPrisma(statusInput || Status.ATIVO),
-          ...restData,
         };
+      }
 
+      const novaDificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
         return await prisma.dificuldadeAprendizagem.create({
-          data: createData as any, // Usando any para contornar a incompatibilidade de tipos
+          data: createData,
         });
       });
 
-      return this.mapToDificuldade(dificuldade);
+      return this.mapToDificuldade(novaDificuldade);
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
   }
 
   /**
-   * Atualizar uma dificuldade
+   * Atualizar uma dificuldade existente
    */
   async update(id: string, data: Record<string, unknown>): Promise<DificuldadeAprendizagem> {
     try {
-      const dificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
-        // Extrair status se existir para mapeamento correto
-        const { status: statusInput, ...outrosDados } = data as { status?: string };
+      const { statusInput, ...outrosDados } = data;
 
-        // Montar objeto de atualização tipado
-        const updateData: Record<string, unknown> = { ...outrosDados };
-        if (statusInput) {
-          updateData.status = mapLocalStatusToPrisma(statusInput);
-        }
+      // Construir objeto de update
+      const updateData: Record<string, unknown> = { ...outrosDados };
+      if (statusInput) {
+        updateData.status = mapStatusToPrisma(statusInput as Status);
+      }
 
+      // Remover campos que não existem no schema do Prisma
+      if ('tipo' in updateData) {
+        // Se o schema não tiver 'tipo', mas tiver 'metadados', armazenar lá
+        const metadadosObj = {
+          tipo: String(updateData.tipo),
+        };
+
+        updateData.metadados = metadadosObj;
+        delete updateData.tipo;
+      }
+
+      const dificuldadeAtualizada = await this.unitOfWork.withTransaction(async (prisma) => {
         return await prisma.dificuldadeAprendizagem.update({
           where: { id },
-          data: updateData,
+          data: updateData as Prisma.DificuldadeAprendizagemUpdateInput,
         });
       });
 
-      return this.mapToDificuldade(dificuldade);
+      return this.mapToDificuldade(dificuldadeAtualizada);
     } catch (error) {
       this.handlePrismaError(error, 'Dificuldade');
     }
   }
 
   /**
-   * Remover uma dificuldade
+   * Excluir uma dificuldade
    */
   async delete(id: string): Promise<void> {
     try {
       await this.unitOfWork.withTransaction(async (prisma) => {
-        // Remover associações com estudantes primeiro
-        await prisma.estudanteDificuldade.deleteMany({
+        // Primeiro verificar se existem associações com estudantes
+        const associacoes = await prisma.estudanteDificuldade.findMany({
           where: { dificuldadeId: id },
         });
 
-        // Remover a dificuldade
+        if (associacoes.length > 0) {
+          throw new Error(
+            'Não é possível excluir esta dificuldade porque está associada a estudantes',
+          );
+        }
+
+        // Excluir a dificuldade
         await prisma.dificuldadeAprendizagem.delete({
           where: { id },
         });
@@ -247,14 +247,23 @@ export class DificuldadeRepository
    * Converter dados do Prisma para a entidade de domínio
    */
   private mapToDificuldade(dificuldadePrisma: Record<string, unknown>): DificuldadeAprendizagem {
+    // Extrair tipo do campo metadados se não houver campo tipo direto
+    let tipo = dificuldadePrisma.tipo as string;
+    if (!tipo && dificuldadePrisma.metadados) {
+      const metadados = dificuldadePrisma.metadados as Record<string, unknown>;
+      tipo = metadados.tipo as string;
+    }
+
     return DificuldadeAprendizagem.restaurar({
       id: dificuldadePrisma.id as string,
       nome: dificuldadePrisma.nome as string,
       descricao: dificuldadePrisma.descricao as string,
       sintomas: (dificuldadePrisma.sintomas as string) || '',
-      tipo: dificuldadePrisma.tipo as string as TipoDificuldade,
+      tipo:
+        (tipo as TipoDificuldade) ||
+        this.obterTipoDaCategoria(dificuldadePrisma.categoria as string),
       categoria: dificuldadePrisma.categoria as string as CategoriaDificuldade,
-      status: mapPrismaStatusToLocal(dificuldadePrisma.status as string),
+      status: mapStatusFromPrisma(dificuldadePrisma.status as Status),
       criadoEm: this.parseDate(dificuldadePrisma.criadoEm),
       atualizadoEm: this.parseDate(dificuldadePrisma.atualizadoEm),
     });
@@ -264,5 +273,53 @@ export class DificuldadeRepository
     if (value instanceof Date) return value;
     if (typeof value === 'string' || typeof value === 'number') return new Date(value);
     return new Date();
+  }
+
+  private mapCategoriaParaPrisma(categoria: CategoriaDificuldade): PrismaCategoriaDificuldade {
+    return categoria as unknown as PrismaCategoriaDificuldade;
+  }
+
+  private mapTipoToCategoria(tipo: TipoDificuldade): PrismaCategoriaDificuldade {
+    // Mapeamento entre TipoDificuldade e CategoriaDificuldade do Prisma
+    switch (tipo) {
+      case TipoDificuldade.LEITURA:
+        return 'LEITURA' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.ESCRITA:
+        return 'ESCRITA' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.MATEMATICA:
+        return 'MATEMATICA' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.COMPORTAMENTAL:
+        return 'COMPORTAMENTO' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.ATENCAO:
+        return 'ATENCAO' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.SOCIAL:
+        return 'COMUNICACAO' as PrismaCategoriaDificuldade;
+      case TipoDificuldade.NEUROMOTORA:
+        return 'COORDENACAO_MOTORA' as PrismaCategoriaDificuldade;
+      default:
+        return 'OUTRO' as PrismaCategoriaDificuldade;
+    }
+  }
+
+  private obterTipoDaCategoria(categoria: string): TipoDificuldade {
+    // Inferir o tipo a partir da categoria
+    switch (categoria) {
+      case 'LEITURA':
+        return TipoDificuldade.LEITURA;
+      case 'ESCRITA':
+        return TipoDificuldade.ESCRITA;
+      case 'MATEMATICA':
+        return TipoDificuldade.MATEMATICA;
+      case 'COMPORTAMENTO':
+        return TipoDificuldade.COMPORTAMENTAL;
+      case 'ATENCAO':
+        return TipoDificuldade.ATENCAO;
+      case 'COMUNICACAO':
+        return TipoDificuldade.SOCIAL;
+      case 'COORDENACAO_MOTORA':
+        return TipoDificuldade.NEUROMOTORA;
+      default:
+        return TipoDificuldade.OUTRO;
+    }
   }
 }

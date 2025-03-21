@@ -23,15 +23,11 @@ jest.mock('tsyringe', () => ({
 }));
 
 // Mocks para os casos de uso
-const listarUsuariosUseCaseMock = mock<IUseCase<any, any>>();
-const detalharUsuarioUseCaseMock = mock<IUseCase<any, any>>();
-const criarUsuarioUseCaseMock = mock<IUseCase<any, any>>();
-const atualizarUsuarioUseCaseMock = mock<IUseCase<any, any>>();
-const excluirUsuarioUseCaseMock = mock<IUseCase<any, any>>();
-
-// Mock para request e response
-let requestMock: Partial<Request>;
-let responseMock: Partial<Response>;
+const listarUsuariosUseCaseMock = mock<IUseCase<unknown, unknown>>();
+const detalharUsuarioUseCaseMock = mock<IUseCase<unknown, unknown>>();
+const criarUsuarioUseCaseMock = mock<IUseCase<unknown, unknown>>();
+const atualizarUsuarioUseCaseMock = mock<IUseCase<unknown, unknown>>();
+const excluirUsuarioUseCaseMock = mock<IUseCase<unknown, unknown>>();
 
 describe('UsuarioController', () => {
   let usuarioController: UsuarioController;

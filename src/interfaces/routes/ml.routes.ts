@@ -1,16 +1,28 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { container } from 'tsyringe';
-import { IMLService } from '@domain/services/ml/ml-service.interface';
-import { EstudanteRepository } from '@infrastructure/repositories/estudante.repository';
-import { IntervencaoRepository } from '@infrastructure/repositories/intervencao.repository';
-import { authMiddleware } from '@interfaces/middlewares/auth.middleware';
-import { rbacMiddleware } from '@interfaces/middlewares/rbac.middleware';
-import { CargoUsuario } from '@shared/enums';
+import { IMLService } from '../../domain/services/ml/ml-service.interface';
+import { EstudanteRepository } from '../../infrastructure/repositories/estudante.repository';
+import { IntervencaoRepository } from '../../infrastructure/repositories/intervencao.repository';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { rbacMiddleware } from '../middlewares/rbac.middleware';
+import { CargoUsuario } from '../../shared/enums';
+import { IDificuldadeRepository } from '../../domain/repositories/dificuldade-repository.interface';
+
+// Interface para request com usuário
+interface RequestWithUser extends Request {
+  user: {
+    id: string;
+    email: string;
+    cargo: CargoUsuario;
+    nome?: string;
+  };
+}
 
 const mlRoutes = Router();
 const mlService = container.resolve<IMLService>('MLService');
 const estudanteRepository = container.resolve(EstudanteRepository);
 const intervencaoRepository = container.resolve(IntervencaoRepository);
+const dificuldadeRepository = container.resolve<IDificuldadeRepository>('DificuldadeRepository');
 
 // Middleware de autenticação para todas as rotas
 mlRoutes.use(authMiddleware);
@@ -19,12 +31,12 @@ mlRoutes.use(authMiddleware);
 mlRoutes.get(
   '/estudantes/:estudanteId/risco',
   rbacMiddleware([CargoUsuario.ADMIN, CargoUsuario.PROFESSOR, CargoUsuario.ESPECIALISTA]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { estudanteId } = req.params;
       const { incluirFatores } = req.query;
 
-      const estudante = await estudanteRepository.obterPorId(estudanteId);
+      const estudante = await estudanteRepository.findById(estudanteId);
 
       if (!estudante) {
         return res.status(404).json({ message: 'Estudante não encontrado' });
@@ -47,19 +59,19 @@ mlRoutes.get(
 mlRoutes.get(
   '/estudantes/:estudanteId/recomendacoes',
   rbacMiddleware([CargoUsuario.ADMIN, CargoUsuario.PROFESSOR, CargoUsuario.ESPECIALISTA]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { estudanteId } = req.params;
       const { limite } = req.query;
 
-      const estudante = await estudanteRepository.obterPorId(estudanteId);
+      const estudante = await estudanteRepository.findById(estudanteId);
 
       if (!estudante) {
         return res.status(404).json({ message: 'Estudante não encontrado' });
       }
 
       // Buscar dificuldades do estudante
-      const dificuldades = await estudanteRepository.obterDificuldades(estudanteId);
+      const dificuldades = await dificuldadeRepository.findByEstudanteId(estudanteId);
 
       const recomendacoes = await mlService.recomendarIntervencoes(
         estudante,
@@ -79,12 +91,12 @@ mlRoutes.get(
 mlRoutes.get(
   '/intervencoes/:intervencaoId/eficacia',
   rbacMiddleware([CargoUsuario.ADMIN, CargoUsuario.PROFESSOR, CargoUsuario.ESPECIALISTA]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { intervencaoId } = req.params;
       const { metricas } = req.query;
 
-      const intervencao = await intervencaoRepository.obterPorId(intervencaoId);
+      const intervencao = await intervencaoRepository.findById(intervencaoId);
 
       if (!intervencao) {
         return res.status(404).json({ message: 'Intervenção não encontrada' });
@@ -109,7 +121,7 @@ mlRoutes.get(
 mlRoutes.get(
   '/padroes',
   rbacMiddleware([CargoUsuario.ADMIN, CargoUsuario.PROFESSOR, CargoUsuario.ESPECIALISTA]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { limiteConfianca, area, estudanteId } = req.query;
 
@@ -136,12 +148,12 @@ mlRoutes.get(
 mlRoutes.get(
   '/estudantes/:estudanteId/comparacao',
   rbacMiddleware([CargoUsuario.ADMIN, CargoUsuario.PROFESSOR, CargoUsuario.ESPECIALISTA]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { estudanteId } = req.params;
       const { indicadores } = req.query;
 
-      const estudante = await estudanteRepository.obterPorId(estudanteId);
+      const estudante = await estudanteRepository.findById(estudanteId);
 
       if (!estudante) {
         return res.status(404).json({ message: 'Estudante não encontrado' });
@@ -166,24 +178,28 @@ mlRoutes.get(
 // Rotas para modelos de ML (acesso restrito a administradores)
 
 // Listar modelos disponíveis
-mlRoutes.get('/modelos', rbacMiddleware([CargoUsuario.ADMIN]), async (req, res) => {
-  try {
-    const { tipo } = req.query;
+mlRoutes.get(
+  '/modelos',
+  rbacMiddleware([CargoUsuario.ADMIN]),
+  async (req: RequestWithUser, res) => {
+    try {
+      const { tipo } = req.query;
 
-    const modelos = await mlService.listarModelos(tipo as string);
+      const modelos = await mlService.listarModelos(tipo as string);
 
-    return res.json(modelos);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao listar modelos' });
-  }
-});
+      return res.json(modelos);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Erro ao listar modelos' });
+    }
+  },
+);
 
 // Treinar modelo específico
 mlRoutes.post(
   '/modelos/:modeloId/treinar',
   rbacMiddleware([CargoUsuario.ADMIN]),
-  async (req, res) => {
+  async (req: RequestWithUser, res) => {
     try {
       const { modeloId } = req.params;
       const configuracao = req.body;
@@ -199,23 +215,27 @@ mlRoutes.post(
 );
 
 // Registrar dados para treinamento
-mlRoutes.post('/dados/treinamento', rbacMiddleware([CargoUsuario.ADMIN]), async (req, res) => {
-  try {
-    const dados = req.body;
+mlRoutes.post(
+  '/dados/treinamento',
+  rbacMiddleware([CargoUsuario.ADMIN]),
+  async (req: RequestWithUser, res) => {
+    try {
+      const dados = req.body;
 
-    if (!Array.isArray(dados)) {
-      return res
-        .status(400)
-        .json({ message: 'O corpo da requisição deve ser um array de dados de treinamento' });
+      if (!Array.isArray(dados)) {
+        return res
+          .status(400)
+          .json({ message: 'O corpo da requisição deve ser um array de dados de treinamento' });
+      }
+
+      await mlService.registrarDadosTreinamento(dados);
+
+      return res.status(201).json({ message: 'Dados de treinamento registrados com sucesso' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Erro ao registrar dados de treinamento' });
     }
-
-    await mlService.registrarDadosTreinamento(dados);
-
-    return res.status(201).json({ message: 'Dados de treinamento registrados com sucesso' });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao registrar dados de treinamento' });
-  }
-});
+  },
+);
 
 export { mlRoutes };

@@ -3,10 +3,15 @@ import {
   MembroEquipe,
   EstudanteEquipe,
 } from '@domain/repositories/equipe-repository.interface';
-import { Equipe, PapelMembro } from '@domain/entities/equipe.entity';
+import {
+  Equipe,
+  PapelMembro,
+  MembroEquipeProps,
+  EstudanteEquipeProps,
+} from '@domain/entities/equipe.entity';
 import { BaseRepository } from './base.repository';
 import { Status, CargoEquipe } from '@shared/enums';
-import { mapLocalStatusToPrisma, mapPrismaStatusToLocal } from '@shared/utils/enum-mappers';
+import { mapStatusToPrisma, mapStatusFromPrisma } from '@shared/utils/enum-mappers';
 import { AppError } from '@shared/errors/app-error';
 import { injectable } from 'tsyringe';
 import { UnitOfWork } from '../database/unit-of-work';
@@ -172,7 +177,7 @@ export class EquipeRepository extends BaseRepository<Equipe> implements IEquipeR
         const createData = {
           nome,
           descricao,
-          status: mapLocalStatusToPrisma(statusInput || Status.ATIVO),
+          status: mapStatusToPrisma(statusInput || Status.ATIVO),
           ativo: ativo !== undefined ? ativo : true,
           ...outrosDados,
         };
@@ -201,7 +206,7 @@ export class EquipeRepository extends BaseRepository<Equipe> implements IEquipeR
         // Preparar dados da atualização
         const updateData: Record<string, unknown> = { ...outrosDados };
         if (statusInput) {
-          updateData.status = mapLocalStatusToPrisma(statusInput);
+          updateData.status = mapStatusToPrisma(statusInput);
         }
 
         return await prisma.equipe.update({
@@ -654,9 +659,9 @@ export class EquipeRepository extends BaseRepository<Equipe> implements IEquipeR
       id: data.id,
       nome: data.nome,
       descricao: data.descricao || '',
-      status: mapPrismaStatusToLocal(data.status),
-      membros: membrosProps as any,
-      estudantes: estudantesProps as any,
+      status: mapStatusFromPrisma(data.status),
+      membros: membrosProps as MembroEquipeProps[],
+      estudantes: estudantesProps as EstudanteEquipeProps[],
       criadoEm: data.criadoEm,
       atualizadoEm: data.atualizadoEm,
     });

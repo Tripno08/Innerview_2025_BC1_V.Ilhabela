@@ -12,14 +12,14 @@ export declare const criarUsuarioSchema: z.ZodObject<{
         ADMINISTRADOR: "ADMINISTRADOR";
     }>>>;
 }, "strip", z.ZodTypeAny, {
-    nome?: string;
     email?: string;
     cargo?: "ADMIN" | "PROFESSOR" | "ESPECIALISTA" | "COORDENADOR" | "DIRETOR" | "ADMINISTRADOR";
+    nome?: string;
     senha?: string;
 }, {
-    nome?: string;
     email?: string;
     cargo?: "ADMIN" | "PROFESSOR" | "ESPECIALISTA" | "COORDENADOR" | "DIRETOR" | "ADMINISTRADOR";
+    nome?: string;
     senha?: string;
 }>;
 export declare const atualizarUsuarioSchema: z.ZodObject<{
@@ -35,14 +35,14 @@ export declare const atualizarUsuarioSchema: z.ZodObject<{
         ADMINISTRADOR: "ADMINISTRADOR";
     }>>;
 }, "strip", z.ZodTypeAny, {
-    nome?: string;
     email?: string;
     cargo?: "ADMIN" | "PROFESSOR" | "ESPECIALISTA" | "COORDENADOR" | "DIRETOR" | "ADMINISTRADOR";
+    nome?: string;
     senha?: string;
 }, {
-    nome?: string;
     email?: string;
     cargo?: "ADMIN" | "PROFESSOR" | "ESPECIALISTA" | "COORDENADOR" | "DIRETOR" | "ADMINISTRADOR";
+    nome?: string;
     senha?: string;
 }>;
 export declare const loginUsuarioSchema: z.ZodObject<{

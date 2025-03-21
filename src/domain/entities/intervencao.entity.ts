@@ -1,4 +1,4 @@
-import { Status } from '@shared/enums';
+import { Status } from '../../shared/enums';
 
 /**
  * Tipos de intervenção

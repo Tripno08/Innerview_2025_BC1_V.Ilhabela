@@ -1,8 +1,10 @@
-import { Status, CargoUsuario, Prioridade } from '@shared/enums';
+import { Status, CargoUsuario, Prioridade } from '../enums';
 import { Status as PrismaStatus, CargoUsuario as PrismaCargoUsuario } from '@prisma/client';
-export declare function mapLocalStatusToPrisma(status: Status | string): PrismaStatus;
-export declare function mapPrismaStatusToLocal(prismaStatus: PrismaStatus | string): Status;
-export declare function mapLocalCargoToPrisma(cargo: CargoUsuario | string): PrismaCargoUsuario;
-export declare function mapPrismaCargoToLocal(prismaCargo: PrismaCargoUsuario | string): CargoUsuario;
-export declare function mapLocalPrioridadeToPrisma(prioridade: Prioridade): string;
-export declare function mapPrismaPrioridadeToLocal(prioridade: string): Prioridade;
+export declare const StatusMap: Record<Status, string>;
+export declare const CargoUsuarioMap: Record<CargoUsuario, string>;
+export declare function mapStatusToPrisma(status: Status | string): PrismaStatus;
+export declare function mapStatusFromPrisma(status: PrismaStatus | string): Status;
+export declare function mapCargoToPrisma(cargo: CargoUsuario | string): PrismaCargoUsuario;
+export declare function mapCargoFromPrisma(cargo: PrismaCargoUsuario | string): CargoUsuario;
+export declare function mapPrioridadeToPrisma(prioridade: Prioridade | string): string;
+export declare function mapPrioridadeFromPrisma(prioridade: string): Prioridade;

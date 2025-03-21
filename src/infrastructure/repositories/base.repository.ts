@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { UnitOfWork } from '@infrastructure/database/unit-of-work';
-import { AppError } from '@shared/errors/app-error';
-import { IBaseRepository } from '@domain/repositories/base-repository.interface';
+import { UnitOfWork } from '../database/unit-of-work';
+import { AppError } from '../../shared/errors/app-error';
+import { IBaseRepository } from '../../domain/repositories/base-repository.interface';
 
 /**
  * Classe base para todos os repositórios Prisma

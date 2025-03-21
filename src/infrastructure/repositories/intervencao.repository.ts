@@ -1,10 +1,10 @@
 import { injectable } from 'tsyringe';
-import { AppError } from '@shared/errors/app-error';
-import { IIntervencaoRepository } from '@domain/repositories/intervencao-repository.interface';
-import { Intervencao, TipoIntervencao } from '@domain/entities/intervencao.entity';
+import { AppError } from '../../shared/errors/app-error';
+import { IIntervencaoRepository } from '../../domain/repositories/intervencao-repository.interface';
+import { Intervencao, TipoIntervencao } from '../../domain/entities/intervencao.entity';
 import { BaseRepository } from './base.repository';
-import { Status } from '@shared/enums';
-import { mapLocalStatusToPrisma, mapPrismaStatusToLocal } from '@shared/utils/enum-mappers';
+import { Status } from '../../shared/enums';
+import { mapStatusToPrisma, mapStatusFromPrisma } from '../../shared/utils/enum-mappers';
 import { UnitOfWork } from '../database/unit-of-work';
 
 /**
@@ -177,7 +177,7 @@ export class IntervencaoRepository
             titulo: tituloData,
             descricao: descricaoData,
             tipo: tipoData.toString(),
-            status: mapLocalStatusToPrisma(Status.ATIVO),
+            status: mapStatusToPrisma(Status.ATIVO),
             duracao: duracaoData,
             dificuldadesAlvo: dificuldadesAlvoData,
             publico: publicoData,
@@ -314,7 +314,7 @@ export class IntervencaoRepository
           estudanteId: data.estudanteId,
           dataInicio: data.dataInicio || new Date(),
           dataFim: data.dataFim || null,
-          status: mapLocalStatusToPrisma(data.status || Status.EM_ANDAMENTO),
+          status: mapStatusToPrisma(data.status || Status.EM_ANDAMENTO),
           intervencaoBaseId: data.intervencaoBaseId || null,
           observacoes: data.observacoes || null,
           progresso: data.progresso || 0, // Manter campo progresso para compatibilidade
@@ -355,7 +355,7 @@ export class IntervencaoRepository
             ...(data.descricao && { descricao: data.descricao }),
             ...(data.dataInicio && { dataInicio: data.dataInicio }),
             ...(data.dataFim !== undefined && { dataFim: data.dataFim }),
-            ...(data.status && { status: mapLocalStatusToPrisma(data.status) }),
+            ...(data.status && { status: mapStatusToPrisma(data.status) }),
             ...(data.intervencaoBaseId !== undefined && {
               intervencaoBaseId: data.intervencaoBaseId,
             }),
@@ -433,7 +433,7 @@ export class IntervencaoRepository
         return await prisma.intervencao.update({
           where: { id },
           data: {
-            status: mapLocalStatusToPrisma(status),
+            status: mapStatusToPrisma(status),
             ...(valor === 100 && { dataFim: new Date() }),
           },
           include: this.getIntervencaoIncludes(),
@@ -469,7 +469,7 @@ export class IntervencaoRepository
         return await prisma.intervencao.update({
           where: { id },
           data: {
-            status: mapLocalStatusToPrisma(Status.CONCLUIDO),
+            status: mapStatusToPrisma(Status.CONCLUIDO),
             dataFim: new Date(),
           },
           include: this.getIntervencaoIncludes(),
@@ -494,7 +494,7 @@ export class IntervencaoRepository
         return await prisma.intervencao.update({
           where: { id },
           data: {
-            status: mapLocalStatusToPrisma(Status.CANCELADO),
+            status: mapStatusToPrisma(Status.CANCELADO),
             dataFim: new Date(),
           },
           include: this.getIntervencaoIncludes(),
@@ -539,7 +539,7 @@ export class IntervencaoRepository
       titulo: modeloPrisma.titulo,
       descricao: modeloPrisma.descricao,
       tipo: modeloPrisma.tipo as TipoIntervencao,
-      status: mapPrismaStatusToLocal(modeloPrisma.status) as Status,
+      status: mapStatusFromPrisma(modeloPrisma.status),
       duracao: modeloPrisma.duracao,
       dificuldadesAlvo: modeloPrisma.dificuldadesAlvo || [],
       publico: modeloPrisma.publico || [],
@@ -575,7 +575,7 @@ export class IntervencaoRepository
       titulo: descricao.substring(0, 50), // Usar parte da descrição como título, limitado a 50 caracteres
       tipo: tipo as TipoIntervencao,
       descricao,
-      status: mapPrismaStatusToLocal(statusString) as Status,
+      status: mapStatusFromPrisma(statusString),
       dataInicio,
       dataFim,
       estudanteId,

@@ -1,6 +1,18 @@
 import { Request, Response } from 'express';
 import { container } from 'tsyringe';
-import { IUseCase } from '@application/interfaces/IUseCase';
+import { IUseCase } from '../../application/interfaces/IUseCase';
+import { Intervencao, TipoIntervencao } from '../../domain/entities/intervencao.entity';
+import { Status, CargoUsuario } from '../../shared/enums';
+
+// Usando interface personalizada em vez de namespace
+interface RequestWithUser extends Request {
+  user: {
+    id: string;
+    nome?: string;
+    email: string;
+    cargo: CargoUsuario;
+  };
+}
 
 /**
  * @swagger
@@ -8,6 +20,64 @@ import { IUseCase } from '@application/interfaces/IUseCase';
  *   name: Intervenções
  *   description: Operações relacionadas às intervenções pedagógicas
  */
+
+/**
+ * Interfaces para os DTOs
+ */
+interface ListarIntervencoesDTO {
+  estudanteId?: string;
+  equipeId?: string;
+  status?: string;
+  tipo?: string;
+  page?: number;
+  limit?: number;
+  usuarioId: string;
+}
+
+interface DetalharIntervencaoDTO {
+  id: string;
+  usuarioId: string;
+}
+
+interface CriarIntervencaoDTO {
+  estudanteId: string;
+  intervencaoBaseId?: string;
+  tipo: TipoIntervencao;
+  descricao: string;
+  dataInicio?: Date;
+  observacoes?: string;
+  usuarioId: string;
+}
+
+interface AtualizarIntervencaoDTO {
+  id: string;
+  tipo?: TipoIntervencao;
+  descricao?: string;
+  dataInicio?: Date;
+  dataFim?: Date;
+  status?: Status;
+  observacoes?: string;
+  usuarioId: string;
+}
+
+interface RegistrarProgressoDTO {
+  intervencaoId: string;
+  progresso: number;
+  observacao?: string;
+  usuarioId: string;
+}
+
+interface AvaliarEficaciaDTO {
+  intervencaoId: string;
+  nota: number;
+  observacao?: string;
+  usuarioId: string;
+}
+
+interface ExcluirIntervencaoDTO {
+  id: string;
+  usuarioId: string;
+}
 
 /**
  * Controller para as rotas de intervenção
@@ -50,12 +120,12 @@ export class IntervencaoController {
    *       200:
    *         description: Lista de intervenções
    */
-  async listar(req: Request, res: Response): Promise<Response> {
+  async listar(req: RequestWithUser, res: Response): Promise<Response> {
     const { estudanteId, equipeId, status, tipo, page, limit } = req.query;
 
-    const listarIntervencoesUseCase = container.resolve<IUseCase<any, any>>(
-      'ListarIntervencoesUseCase',
-    );
+    const listarIntervencoesUseCase = container.resolve<
+      IUseCase<ListarIntervencoesDTO, Intervencao[]>
+    >('ListarIntervencoesUseCase');
 
     const intervencoes = await listarIntervencoesUseCase.execute({
       estudanteId: estudanteId as string,
@@ -92,12 +162,12 @@ export class IntervencaoController {
    *       404:
    *         description: Intervenção não encontrada
    */
-  async detalhar(req: Request, res: Response): Promise<Response> {
+  async detalhar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const detalharIntervencaoUseCase = container.resolve<IUseCase<any, any>>(
-      'DetalharIntervencaoUseCase',
-    );
+    const detalharIntervencaoUseCase = container.resolve<
+      IUseCase<DetalharIntervencaoDTO, Intervencao>
+    >('DetalharIntervencaoUseCase');
 
     const intervencao = await detalharIntervencaoUseCase.execute({
       id,
@@ -152,9 +222,9 @@ export class IntervencaoController {
    *       201:
    *         description: Intervenção criada com sucesso
    */
-  async criar(req: Request, res: Response): Promise<Response> {
+  async criar(req: RequestWithUser, res: Response): Promise<Response> {
     const criarIntervencaoUseCase =
-      container.resolve<IUseCase<any, any>>('CriarIntervencaoUseCase');
+      container.resolve<IUseCase<CriarIntervencaoDTO, Intervencao>>('CriarIntervencaoUseCase');
 
     const intervencao = await criarIntervencaoUseCase.execute({
       ...req.body,
@@ -215,12 +285,12 @@ export class IntervencaoController {
    *       404:
    *         description: Intervenção não encontrada
    */
-  async atualizar(req: Request, res: Response): Promise<Response> {
+  async atualizar(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const atualizarIntervencaoUseCase = container.resolve<IUseCase<any, any>>(
-      'AtualizarIntervencaoUseCase',
-    );
+    const atualizarIntervencaoUseCase = container.resolve<
+      IUseCase<AtualizarIntervencaoDTO, Intervencao>
+    >('AtualizarIntervencaoUseCase');
 
     const intervencao = await atualizarIntervencaoUseCase.execute({
       id,
@@ -270,22 +340,22 @@ export class IntervencaoController {
    *       404:
    *         description: Intervenção não encontrada
    */
-  async registrarProgresso(req: Request, res: Response): Promise<Response> {
+  async registrarProgresso(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
-    const { valor, observacao } = req.body;
+    const { progresso, observacao } = req.body;
 
-    const registrarProgressoIntervencaoUseCase = container.resolve<IUseCase<any, any>>(
-      'RegistrarProgressoIntervencaoUseCase',
-    );
+    const registrarProgressoIntervencaoUseCase = container.resolve<
+      IUseCase<RegistrarProgressoDTO, Intervencao>
+    >('RegistrarProgressoIntervencaoUseCase');
 
-    const progresso = await registrarProgressoIntervencaoUseCase.execute({
+    const intervencao = await registrarProgressoIntervencaoUseCase.execute({
       intervencaoId: id,
-      valor,
+      progresso,
       observacao,
       usuarioId: req.user.id,
     });
 
-    return res.json(progresso);
+    return res.json(intervencao);
   }
 
   /**
@@ -327,13 +397,13 @@ export class IntervencaoController {
    *       404:
    *         description: Intervenção não encontrada
    */
-  async avaliarEficacia(req: Request, res: Response): Promise<Response> {
+  async avaliarEficacia(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
     const { nota, observacao } = req.body;
 
-    const avaliarEficaciaIntervencaoUseCase = container.resolve<IUseCase<any, any>>(
-      'AvaliarEficaciaIntervencaoUseCase',
-    );
+    const avaliarEficaciaIntervencaoUseCase = container.resolve<
+      IUseCase<AvaliarEficaciaDTO, Intervencao>
+    >('AvaliarEficaciaIntervencaoUseCase');
 
     const avaliacao = await avaliarEficaciaIntervencaoUseCase.execute({
       intervencaoId: id,
@@ -367,10 +437,10 @@ export class IntervencaoController {
    *       404:
    *         description: Intervenção não encontrada
    */
-  async excluir(req: Request, res: Response): Promise<Response> {
+  async excluir(req: RequestWithUser, res: Response): Promise<Response> {
     const { id } = req.params;
 
-    const excluirIntervencaoUseCase = container.resolve<IUseCase<any, any>>(
+    const excluirIntervencaoUseCase = container.resolve<IUseCase<ExcluirIntervencaoDTO, void>>(
       'ExcluirIntervencaoUseCase',
     );
 

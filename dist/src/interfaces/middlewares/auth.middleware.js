@@ -12,7 +12,7 @@ function authMiddleware(req, res, next) {
     const [, token] = authHeader.split(' ');
     try {
         const decoded = (0, jsonwebtoken_1.verify)(token, process.env.JWT_SECRET);
-        const cargoLocal = (0, enum_mappers_1.mapPrismaCargoToLocal)(decoded.cargo);
+        const cargoLocal = (0, enum_mappers_1.mapCargoFromPrisma)(decoded.cargo);
         req.user = {
             id: String(decoded.sub),
             email: decoded.email,

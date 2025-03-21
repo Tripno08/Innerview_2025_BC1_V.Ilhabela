@@ -107,7 +107,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                         titulo: tituloData,
                         descricao: descricaoData,
                         tipo: tipoData.toString(),
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(enums_1.Status.ATIVO),
+                        status: (0, enum_mappers_1.mapStatusToPrisma)(enums_1.Status.ATIVO),
                         duracao: duracaoData,
                         dificuldadesAlvo: dificuldadesAlvoData,
                         publico: publicoData,
@@ -212,7 +212,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                     estudanteId: data.estudanteId,
                     dataInicio: data.dataInicio || new Date(),
                     dataFim: data.dataFim || null,
-                    status: (0, enum_mappers_1.mapLocalStatusToPrisma)(data.status || enums_1.Status.EM_ANDAMENTO),
+                    status: (0, enum_mappers_1.mapStatusToPrisma)(data.status || enums_1.Status.EM_ANDAMENTO),
                     intervencaoBaseId: data.intervencaoBaseId || null,
                     observacoes: data.observacoes || null,
                     progresso: data.progresso || 0,
@@ -247,7 +247,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                         ...(data.descricao && { descricao: data.descricao }),
                         ...(data.dataInicio && { dataInicio: data.dataInicio }),
                         ...(data.dataFim !== undefined && { dataFim: data.dataFim }),
-                        ...(data.status && { status: (0, enum_mappers_1.mapLocalStatusToPrisma)(data.status) }),
+                        ...(data.status && { status: (0, enum_mappers_1.mapStatusToPrisma)(data.status) }),
                         ...(data.intervencaoBaseId !== undefined && {
                             intervencaoBaseId: data.intervencaoBaseId,
                         }),
@@ -306,7 +306,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                 return await prisma.intervencao.update({
                     where: { id },
                     data: {
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status),
+                        status: (0, enum_mappers_1.mapStatusToPrisma)(status),
                         ...(valor === 100 && { dataFim: new Date() }),
                     },
                     include: this.getIntervencaoIncludes(),
@@ -333,7 +333,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                 return await prisma.intervencao.update({
                     where: { id },
                     data: {
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(enums_1.Status.CONCLUIDO),
+                        status: (0, enum_mappers_1.mapStatusToPrisma)(enums_1.Status.CONCLUIDO),
                         dataFim: new Date(),
                     },
                     include: this.getIntervencaoIncludes(),
@@ -352,7 +352,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
                 return await prisma.intervencao.update({
                     where: { id },
                     data: {
-                        status: (0, enum_mappers_1.mapLocalStatusToPrisma)(enums_1.Status.CANCELADO),
+                        status: (0, enum_mappers_1.mapStatusToPrisma)(enums_1.Status.CANCELADO),
                         dataFim: new Date(),
                     },
                     include: this.getIntervencaoIncludes(),
@@ -385,7 +385,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
             titulo: modeloPrisma.titulo,
             descricao: modeloPrisma.descricao,
             tipo: modeloPrisma.tipo,
-            status: (0, enum_mappers_1.mapPrismaStatusToLocal)(modeloPrisma.status),
+            status: (0, enum_mappers_1.mapStatusFromPrisma)(modeloPrisma.status),
             duracao: modeloPrisma.duracao,
             dificuldadesAlvo: modeloPrisma.dificuldadesAlvo || [],
             publico: modeloPrisma.publico || [],
@@ -401,7 +401,7 @@ let IntervencaoRepository = class IntervencaoRepository extends base_repository_
             titulo: descricao.substring(0, 50),
             tipo: tipo,
             descricao,
-            status: (0, enum_mappers_1.mapPrismaStatusToLocal)(statusString),
+            status: (0, enum_mappers_1.mapStatusFromPrisma)(statusString),
             dataInicio,
             dataFim,
             estudanteId,

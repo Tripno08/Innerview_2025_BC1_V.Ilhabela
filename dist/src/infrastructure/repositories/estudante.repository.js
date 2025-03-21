@@ -13,6 +13,7 @@ exports.EstudanteRepository = void 0;
 const estudante_entity_1 = require("@domain/entities/estudante.entity");
 const dificuldade_aprendizagem_entity_1 = require("@domain/entities/dificuldade-aprendizagem.entity");
 const base_repository_1 = require("./base.repository");
+const enums_1 = require("@shared/enums");
 const app_error_1 = require("@shared/errors/app-error");
 const tsyringe_1 = require("tsyringe");
 const unit_of_work_1 = require("../database/unit-of-work");
@@ -67,17 +68,47 @@ let EstudanteRepository = class EstudanteRepository extends base_repository_1.Ba
     }
     adaptToPrismaCreate(data) {
         const { status, ...restData } = data;
-        return {
-            ...restData,
-            ...(status && { status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status) }),
+        const dadosSemPropriedadesComplexas = this.removerPropriedadesEntidade(restData);
+        const resultado = {
+            ...dadosSemPropriedadesComplexas,
         };
+        if (status) {
+            resultado.status = (0, enum_mappers_1.mapStatusToPrisma)(status);
+        }
+        return resultado;
     }
     adaptToPrismaUpdate(data) {
         const { status, ...restData } = data;
-        return {
-            ...restData,
-            ...(status && { status: (0, enum_mappers_1.mapLocalStatusToPrisma)(status) }),
+        const dadosSemPropriedadesComplexas = this.removerPropriedadesEntidade(restData);
+        const resultado = {
+            ...dadosSemPropriedadesComplexas,
         };
+        if (status) {
+            resultado.status = (0, enum_mappers_1.mapStatusToPrisma)(status);
+        }
+        return resultado;
+    }
+    removerPropriedadesEntidade(data) {
+        const propsParaRemover = [
+            'calcularIdade',
+            'calcularMediaAvaliacoes',
+            'estaAtivo',
+            'inativar',
+            'possuiDificuldadeGrave',
+            'adicionarAvaliacao',
+            'adicionarDificuldade',
+            'atualizar',
+            'removerDificuldade',
+            'dificuldades',
+            'avaliacoes',
+        ];
+        const resultado = { ...data };
+        for (const prop of propsParaRemover) {
+            if (prop in resultado) {
+                delete resultado[prop];
+            }
+        }
+        return resultado;
     }
     async create(data) {
         try {
@@ -156,9 +187,9 @@ let EstudanteRepository = class EstudanteRepository extends base_repository_1.Ba
                     throw new app_error_1.AppError('Dificuldade já associada a este estudante', 409, 'DIFFICULTY_ALREADY_ASSOCIATED');
                 }
                 const createData = {
-                    estudanteId,
-                    dificuldadeId,
-                    nivel: 'LEVE',
+                    estudante: { connect: { id: estudanteId } },
+                    dificuldade: { connect: { id: dificuldadeId } },
+                    nivel: enums_1.Nivel.BAIXO,
                 };
                 if (dadosAdicionais?.tipo) {
                     createData.tipo = dadosAdicionais.tipo;
@@ -220,9 +251,11 @@ let EstudanteRepository = class EstudanteRepository extends base_repository_1.Ba
                     throw new app_error_1.AppError('ID do avaliador é obrigatório', 400, 'ASSESSOR_REQUIRED');
                 }
                 const prismaAvaliacaoData = {
-                    ...avaliacaoData,
-                    estudanteId,
+                    estudante: { connect: { id: estudanteId } },
                     data: avaliacaoData.data || new Date(),
+                    tipo: avaliacaoData.tipo,
+                    pontuacao: avaliacaoData.pontuacao || 0,
+                    observacoes: avaliacaoData.observacoes,
                 };
                 await prisma.avaliacao.create({
                     data: prismaAvaliacaoData,
@@ -278,31 +311,75 @@ let EstudanteRepository = class EstudanteRepository extends base_repository_1.Ba
         };
     }
     mapToEstudante(estudantePrisma) {
-        const dificuldades = Array.isArray(estudantePrisma.dificuldades)
-            ? estudantePrisma.dificuldades.map((rel) => dificuldade_aprendizagem_entity_1.DificuldadeAprendizagem.restaurar({
-                ...rel.dificuldade,
-                tipo: rel.dificuldade.categoria === 'LEITURA'
-                    ? dificuldade_aprendizagem_entity_1.TipoDificuldade.LEITURA
-                    : rel.dificuldade.categoria === 'ESCRITA'
-                        ? dificuldade_aprendizagem_entity_1.TipoDificuldade.ESCRITA
-                        : rel.dificuldade.categoria === 'MATEMATICA'
-                            ? dificuldade_aprendizagem_entity_1.TipoDificuldade.MATEMATICA
-                            : dificuldade_aprendizagem_entity_1.TipoDificuldade.OUTRO,
-            }))
+        const data = estudantePrisma;
+        const dificuldades = Array.isArray(data.dificuldades)
+            ? data.dificuldades.map((rel) => {
+                const relData = rel;
+                const difData = relData.dificuldade;
+                let sintomasProcessados;
+                if (typeof difData.sintomas === 'string') {
+                    sintomasProcessados = difData.sintomas;
+                }
+                else if (Array.isArray(difData.sintomas)) {
+                    sintomasProcessados = difData.sintomas.join(', ');
+                }
+                else {
+                    sintomasProcessados = '';
+                }
+                let tipo = dificuldade_aprendizagem_entity_1.TipoDificuldade.OUTRO;
+                const categoria = difData.categoria;
+                if (categoria === 'LEITURA') {
+                    tipo = dificuldade_aprendizagem_entity_1.TipoDificuldade.LEITURA;
+                }
+                else if (categoria === 'ESCRITA') {
+                    tipo = dificuldade_aprendizagem_entity_1.TipoDificuldade.ESCRITA;
+                }
+                else if (categoria === 'MATEMATICA') {
+                    tipo = dificuldade_aprendizagem_entity_1.TipoDificuldade.MATEMATICA;
+                }
+                let categoriaMapeada = 'LEVE';
+                try {
+                    if (['LEVE', 'MODERADA', 'GRAVE'].includes(categoria)) {
+                        categoriaMapeada = categoria;
+                    }
+                }
+                catch (error) {
+                }
+                return dificuldade_aprendizagem_entity_1.DificuldadeAprendizagem.restaurar({
+                    id: difData.id,
+                    nome: difData.nome,
+                    descricao: difData.descricao,
+                    sintomas: sintomasProcessados,
+                    categoria: categoriaMapeada,
+                    tipo: tipo,
+                });
+            })
+            : [];
+        const avaliacoes = Array.isArray(data.avaliacoes)
+            ? data.avaliacoes.map((aval) => {
+                const avalData = aval;
+                return {
+                    id: avalData.id,
+                    data: avalData.data,
+                    tipo: avalData.tipo,
+                    pontuacao: Number(avalData.pontuacao || 0),
+                    observacoes: avalData.observacoes,
+                    criadoEm: avalData.criadoEm,
+                    atualizadoEm: avalData.atualizadoEm,
+                };
+            })
             : [];
         return estudante_entity_1.Estudante.restaurar({
-            id: estudantePrisma.id,
-            nome: estudantePrisma.nome,
-            serie: estudantePrisma.serie,
-            dataNascimento: estudantePrisma.dataNascimento,
-            status: estudantePrisma.status,
-            usuarioId: estudantePrisma.usuarioId,
+            id: data.id,
+            nome: data.nome,
+            serie: data.serie,
+            dataNascimento: data.dataNascimento,
+            status: data.status,
+            usuarioId: data.usuarioId,
             dificuldades,
-            avaliacoes: (Array.isArray(estudantePrisma.avaliacoes)
-                ? estudantePrisma.avaliacoes
-                : []),
-            criadoEm: estudantePrisma.criadoEm,
-            atualizadoEm: estudantePrisma.atualizadoEm,
+            avaliacoes,
+            criadoEm: data.criadoEm,
+            atualizadoEm: data.atualizadoEm,
         });
     }
 };

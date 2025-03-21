@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { logger } from '@shared/logger';
+import { logger } from '../../shared/logger';
 
 // Instância global do PrismaClient
 const prismaGlobal = global as typeof global & {

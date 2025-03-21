@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DificuldadeController = void 0;
 const tsyringe_1 = require("tsyringe");
-require("../../shared/types/express");
 class DificuldadeController {
     async listar(req, res) {
         const { categoria, tipo, status } = req.query;

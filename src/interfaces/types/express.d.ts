@@ -1,7 +1,6 @@
 // Estendendo a interface Request do Express
-import { CargoUsuario } from '../shared/enums';
+import { CargoUsuario } from '../../shared/enums';
 
-// Extendendo o namespace Express para incluir usuário autenticado em todos os requests
 declare namespace Express {
   interface Request {
     user: {

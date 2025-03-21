@@ -1,4 +1,4 @@
-import { Estudante } from '@domain/entities/estudante.entity';
+import { Estudante } from '../entities/estudante.entity';
 import { IBaseRepository } from './base-repository.interface';
 
 /**

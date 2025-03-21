@@ -4,7 +4,7 @@ import { AppError } from '@shared/errors/app-error';
 import { env } from '@config/env';
 import { logger } from '@shared/logger';
 import { CargoUsuario } from '@shared/enums';
-import { mapPrismaCargoToLocal } from '@shared/utils/enum-mappers';
+import { mapCargoFromPrisma } from '@shared/utils/enum-mappers';
 
 interface DecodedToken {
   sub: string;
@@ -43,7 +43,7 @@ export function ensureAuthenticated(req: Request, res: Response, next: NextFunct
     const decoded = verify(token, env.JWT_SECRET) as DecodedToken;
 
     // Converter o cargo para o enum local
-    const cargoLocal = mapPrismaCargoToLocal(decoded.cargo);
+    const cargoLocal = mapCargoFromPrisma(decoded.cargo);
 
     // Adiciona o usuário na requisição
     req.user = {

@@ -49,35 +49,27 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
     }
     async findByTipo(tipo) {
         try {
-            let categoria;
-            switch (tipo) {
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.LEITURA:
-                    categoria = 'LEITURA';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.ESCRITA:
-                    categoria = 'ESCRITA';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.MATEMATICA:
-                    categoria = 'MATEMATICA';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.COMPORTAMENTAL:
-                    categoria = 'COMPORTAMENTO';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.ATENCAO:
-                    categoria = 'ATENCAO';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.SOCIAL:
-                    categoria = 'COMUNICACAO';
-                    break;
-                case dificuldade_aprendizagem_entity_1.TipoDificuldade.NEUROMOTORA:
-                    categoria = 'COORDENACAO_MOTORA';
-                    break;
-                default:
-                    categoria = 'OUTRO';
-            }
             const dificuldades = await this.unitOfWork.withoutTransaction((prisma) => prisma.dificuldadeAprendizagem.findMany({
                 where: {
-                    categoria: categoria,
+                    categoria: {
+                        equals: this.mapTipoToCategoria(tipo),
+                    },
+                },
+                orderBy: {
+                    nome: 'asc',
+                },
+            }));
+            return dificuldades.map((d) => this.mapToDificuldade(d));
+        }
+        catch (error) {
+            this.handlePrismaError(error, 'Dificuldade');
+        }
+    }
+    async findByCategoria(categoria) {
+        try {
+            const dificuldades = await this.unitOfWork.withoutTransaction((prisma) => prisma.dificuldadeAprendizagem.findMany({
+                where: {
+                    categoria: this.mapCategoriaParaPrisma(categoria),
                 },
                 orderBy: {
                     nome: 'asc',
@@ -91,13 +83,13 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
     }
     async findByEstudanteId(estudanteId) {
         try {
-            const dificuldades = await this.unitOfWork.withoutTransaction((prisma) => prisma.estudanteDificuldade.findMany({
+            const associacoes = await this.unitOfWork.withoutTransaction((prisma) => prisma.estudanteDificuldade.findMany({
                 where: { estudanteId },
                 include: {
                     dificuldade: true,
                 },
             }));
-            return dificuldades.map((rel) => this.mapToDificuldade(rel.dificuldade));
+            return associacoes.map((assoc) => this.mapToDificuldade(assoc.dificuldade));
         }
         catch (error) {
             this.handlePrismaError(error, 'Dificuldade');
@@ -105,22 +97,28 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
     }
     async create(data) {
         try {
-            const dificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
-                const { nome, descricao, sintomas, tipo, categoria, status: statusInput, ...restData } = data;
-                const createData = {
-                    nome,
-                    descricao,
-                    sintomas: sintomas || '',
+            const { nome, descricao, sintomas, tipo, categoria, statusInput, ...restData } = data;
+            if (!nome || !categoria) {
+                throw new Error('Nome e categoria são obrigatórios para criar dificuldade de aprendizagem');
+            }
+            const createData = {
+                nome: String(nome),
+                descricao: descricao ? String(descricao) : '',
+                sintomas: sintomas ? String(sintomas) : '',
+                categoria: this.mapCategoriaParaPrisma(categoria),
+                status: (0, enum_mappers_1.mapStatusToPrisma)(statusInput || enums_1.Status.ATIVO),
+            };
+            if (tipo) {
+                createData.metadados = {
                     tipo: String(tipo),
-                    categoria: String(categoria),
-                    status: (0, enum_mappers_1.mapLocalStatusToPrisma)(statusInput || enums_1.Status.ATIVO),
-                    ...restData,
                 };
+            }
+            const novaDificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
                 return await prisma.dificuldadeAprendizagem.create({
                     data: createData,
                 });
             });
-            return this.mapToDificuldade(dificuldade);
+            return this.mapToDificuldade(novaDificuldade);
         }
         catch (error) {
             this.handlePrismaError(error, 'Dificuldade');
@@ -128,18 +126,24 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
     }
     async update(id, data) {
         try {
-            const dificuldade = await this.unitOfWork.withTransaction(async (prisma) => {
-                const { status: statusInput, ...outrosDados } = data;
-                const updateData = { ...outrosDados };
-                if (statusInput) {
-                    updateData.status = (0, enum_mappers_1.mapLocalStatusToPrisma)(statusInput);
-                }
+            const { statusInput, ...outrosDados } = data;
+            const updateData = { ...outrosDados };
+            if (statusInput) {
+                updateData.status = (0, enum_mappers_1.mapStatusToPrisma)(statusInput);
+            }
+            if ('tipo' in updateData) {
+                updateData.metadados = {
+                    tipo: String(updateData.tipo),
+                };
+                delete updateData.tipo;
+            }
+            const dificuldadeAtualizada = await this.unitOfWork.withTransaction(async (prisma) => {
                 return await prisma.dificuldadeAprendizagem.update({
                     where: { id },
                     data: updateData,
                 });
             });
-            return this.mapToDificuldade(dificuldade);
+            return this.mapToDificuldade(dificuldadeAtualizada);
         }
         catch (error) {
             this.handlePrismaError(error, 'Dificuldade');
@@ -148,9 +152,12 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
     async delete(id) {
         try {
             await this.unitOfWork.withTransaction(async (prisma) => {
-                await prisma.estudanteDificuldade.deleteMany({
+                const associacoes = await prisma.estudanteDificuldade.findMany({
                     where: { dificuldadeId: id },
                 });
+                if (associacoes.length > 0) {
+                    throw new Error('Não é possível excluir esta dificuldade porque está associada a estudantes');
+                }
                 await prisma.dificuldadeAprendizagem.delete({
                     where: { id },
                 });
@@ -161,14 +168,20 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
         }
     }
     mapToDificuldade(dificuldadePrisma) {
+        let tipo = dificuldadePrisma.tipo;
+        if (!tipo && dificuldadePrisma.metadados) {
+            const metadados = dificuldadePrisma.metadados;
+            tipo = metadados.tipo;
+        }
         return dificuldade_aprendizagem_entity_1.DificuldadeAprendizagem.restaurar({
             id: dificuldadePrisma.id,
             nome: dificuldadePrisma.nome,
             descricao: dificuldadePrisma.descricao,
             sintomas: dificuldadePrisma.sintomas || '',
-            tipo: dificuldadePrisma.tipo,
+            tipo: tipo ||
+                this.obterTipoDaCategoria(dificuldadePrisma.categoria),
             categoria: dificuldadePrisma.categoria,
-            status: (0, enum_mappers_1.mapPrismaStatusToLocal)(dificuldadePrisma.status),
+            status: (0, enum_mappers_1.mapStatusFromPrisma)(dificuldadePrisma.status),
             criadoEm: this.parseDate(dificuldadePrisma.criadoEm),
             atualizadoEm: this.parseDate(dificuldadePrisma.atualizadoEm),
         });
@@ -179,6 +192,49 @@ let DificuldadeRepository = class DificuldadeRepository extends base_repository_
         if (typeof value === 'string' || typeof value === 'number')
             return new Date(value);
         return new Date();
+    }
+    mapCategoriaParaPrisma(categoria) {
+        return categoria;
+    }
+    mapTipoToCategoria(tipo) {
+        switch (tipo) {
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.LEITURA:
+                return 'LEITURA';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.ESCRITA:
+                return 'ESCRITA';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.MATEMATICA:
+                return 'MATEMATICA';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.COMPORTAMENTAL:
+                return 'COMPORTAMENTO';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.ATENCAO:
+                return 'ATENCAO';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.SOCIAL:
+                return 'COMUNICACAO';
+            case dificuldade_aprendizagem_entity_1.TipoDificuldade.NEUROMOTORA:
+                return 'COORDENACAO_MOTORA';
+            default:
+                return 'OUTRO';
+        }
+    }
+    obterTipoDaCategoria(categoria) {
+        switch (categoria) {
+            case 'LEITURA':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.LEITURA;
+            case 'ESCRITA':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.ESCRITA;
+            case 'MATEMATICA':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.MATEMATICA;
+            case 'COMPORTAMENTO':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.COMPORTAMENTAL;
+            case 'ATENCAO':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.ATENCAO;
+            case 'COMUNICACAO':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.SOCIAL;
+            case 'COORDENACAO_MOTORA':
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.NEUROMOTORA;
+            default:
+                return dificuldade_aprendizagem_entity_1.TipoDificuldade.OUTRO;
+        }
     }
 };
 exports.DificuldadeRepository = DificuldadeRepository;

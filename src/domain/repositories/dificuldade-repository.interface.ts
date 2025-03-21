@@ -1,7 +1,7 @@
 import {
   DificuldadeAprendizagem,
   TipoDificuldade,
-} from '@domain/entities/dificuldade-aprendizagem.entity';
+} from '../entities/dificuldade-aprendizagem.entity';
 import { IBaseRepository } from './base-repository.interface';
 
 /**

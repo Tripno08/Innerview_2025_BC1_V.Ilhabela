@@ -3,22 +3,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mlRoutes = void 0;
 const express_1 = require("express");
 const tsyringe_1 = require("tsyringe");
-const estudante_repository_1 = require("@infrastructure/repositories/estudante.repository");
-const intervencao_repository_1 = require("@infrastructure/repositories/intervencao.repository");
-const auth_middleware_1 = require("@interfaces/middlewares/auth.middleware");
-const rbac_middleware_1 = require("@interfaces/middlewares/rbac.middleware");
-const enums_1 = require("@shared/enums");
+const estudante_repository_1 = require("../../infrastructure/repositories/estudante.repository");
+const intervencao_repository_1 = require("../../infrastructure/repositories/intervencao.repository");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const rbac_middleware_1 = require("../middlewares/rbac.middleware");
+const enums_1 = require("../../shared/enums");
 const mlRoutes = (0, express_1.Router)();
 exports.mlRoutes = mlRoutes;
 const mlService = tsyringe_1.container.resolve('MLService');
 const estudanteRepository = tsyringe_1.container.resolve(estudante_repository_1.EstudanteRepository);
 const intervencaoRepository = tsyringe_1.container.resolve(intervencao_repository_1.IntervencaoRepository);
+const dificuldadeRepository = tsyringe_1.container.resolve('DificuldadeRepository');
 mlRoutes.use(auth_middleware_1.authMiddleware);
 mlRoutes.get('/estudantes/:estudanteId/risco', (0, rbac_middleware_1.rbacMiddleware)([enums_1.CargoUsuario.ADMIN, enums_1.CargoUsuario.PROFESSOR, enums_1.CargoUsuario.ESPECIALISTA]), async (req, res) => {
     try {
         const { estudanteId } = req.params;
         const { incluirFatores } = req.query;
-        const estudante = await estudanteRepository.obterPorId(estudanteId);
+        const estudante = await estudanteRepository.findById(estudanteId);
         if (!estudante) {
             return res.status(404).json({ message: 'Estudante não encontrado' });
         }
@@ -34,11 +35,11 @@ mlRoutes.get('/estudantes/:estudanteId/recomendacoes', (0, rbac_middleware_1.rba
     try {
         const { estudanteId } = req.params;
         const { limite } = req.query;
-        const estudante = await estudanteRepository.obterPorId(estudanteId);
+        const estudante = await estudanteRepository.findById(estudanteId);
         if (!estudante) {
             return res.status(404).json({ message: 'Estudante não encontrado' });
         }
-        const dificuldades = await estudanteRepository.obterDificuldades(estudanteId);
+        const dificuldades = await dificuldadeRepository.findByEstudanteId(estudanteId);
         const recomendacoes = await mlService.recomendarIntervencoes(estudante, dificuldades, limite ? parseInt(limite) : undefined);
         return res.json(recomendacoes);
     }
@@ -51,7 +52,7 @@ mlRoutes.get('/intervencoes/:intervencaoId/eficacia', (0, rbac_middleware_1.rbac
     try {
         const { intervencaoId } = req.params;
         const { metricas } = req.query;
-        const intervencao = await intervencaoRepository.obterPorId(intervencaoId);
+        const intervencao = await intervencaoRepository.findById(intervencaoId);
         if (!intervencao) {
             return res.status(404).json({ message: 'Intervenção não encontrada' });
         }
@@ -84,7 +85,7 @@ mlRoutes.get('/estudantes/:estudanteId/comparacao', (0, rbac_middleware_1.rbacMi
     try {
         const { estudanteId } = req.params;
         const { indicadores } = req.query;
-        const estudante = await estudanteRepository.obterPorId(estudanteId);
+        const estudante = await estudanteRepository.findById(estudanteId);
         if (!estudante) {
             return res.status(404).json({ message: 'Estudante não encontrado' });
         }

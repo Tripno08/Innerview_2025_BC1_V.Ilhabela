@@ -1,9 +1,9 @@
 import {
   IEstudanteRepository,
   AvaliacaoEstudante,
-} from '@domain/repositories/estudante-repository.interface';
-import { Estudante, Avaliacao } from '@domain/entities/estudante.entity';
-import { AppError } from '@shared/errors/app-error';
+} from '../../../domain/repositories/estudante-repository.interface';
+import { Estudante, Avaliacao } from '../../../domain/entities/estudante.entity';
+import { AppError } from '../../../shared/errors/app-error';
 
 interface RegistrarAvaliacaoDTO {
   estudanteId: string;
@@ -47,63 +47,51 @@ export class RegistrarAvaliacaoUseCase {
       tipo: data.tipo,
       pontuacao: data.pontuacao,
       observacoes: data.observacoes,
-      avaliadorId: data.avaliadorId || 'sistema',
+      avaliadorId: data.avaliadorId,
       disciplina: data.disciplina,
       conteudo: data.conteudo,
     };
 
-    try {
-      // Adicionar a avaliação ao estudante
-      const estudanteAtualizado = await this.estudanteRepository.adicionarAvaliacao(
-        data.estudanteId,
-        avaliacaoData,
-      );
+    // Adicionar a avaliação
+    const estudanteAtualizado = await this.estudanteRepository.adicionarAvaliacao(
+      data.estudanteId,
+      avaliacaoData,
+    );
 
-      // Obter a avaliação recém-adicionada (última na lista)
-      const avaliacaoAdicionada =
-        estudanteAtualizado.avaliacoes[estudanteAtualizado.avaliacoes.length - 1];
+    // Obter a avaliação recém-adicionada (última na lista)
+    const avaliacao = estudanteAtualizado.avaliacoes[estudanteAtualizado.avaliacoes.length - 1];
 
-      return {
-        estudante: estudanteAtualizado,
-        avaliacao: avaliacaoAdicionada,
-      };
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new AppError(
-          `Erro ao registrar avaliação: ${error.message}`,
-          400,
-          'ASSESSMENT_CREATION_ERROR',
-        );
-      }
-      throw error;
-    }
+    // Retornar o resultado
+    return {
+      estudante: estudanteAtualizado,
+      avaliacao,
+    };
   }
 
   /**
-   * Validar dados da avaliação
+   * Validar os dados da avaliação
    */
   private validarAvaliacao(data: RegistrarAvaliacaoDTO): void {
-    // Validar data
+    // Validar tipo da avaliação
+    const tiposValidos = ['PROVA', 'EXERCICIO', 'TRABALHO', 'PARTICIPACAO', 'OUTRO'];
+    if (!tiposValidos.includes(data.tipo)) {
+      throw new AppError(
+        `Tipo de avaliação inválido. Valores válidos: ${tiposValidos.join(', ')}`,
+        400,
+        'INVALID_EVALUATION_TYPE',
+      );
+    }
+
+    // Validar pontuação (de 0 a 10)
+    if (data.pontuacao < 0 || data.pontuacao > 10) {
+      throw new AppError('A pontuação deve estar entre 0 e 10', 400, 'INVALID_EVALUATION_SCORE');
+    }
+
+    // Validar a data (não pode ser futura)
     const dataAvaliacao = new Date(data.data);
     const hoje = new Date();
-
     if (dataAvaliacao > hoje) {
-      throw new AppError('Data da avaliação não pode ser futura', 400, 'INVALID_ASSESSMENT_DATE');
-    }
-
-    // Validar tipo
-    if (!data.tipo || data.tipo.trim() === '') {
-      throw new AppError('Tipo de avaliação é obrigatório', 400, 'INVALID_ASSESSMENT_TYPE');
-    }
-
-    // Validar pontuação
-    if (data.pontuacao < 0 || data.pontuacao > 10) {
-      throw new AppError('Pontuação deve estar entre 0 e 10', 400, 'INVALID_ASSESSMENT_SCORE');
-    }
-
-    // Validar avaliador
-    if (!data.avaliadorId) {
-      throw new AppError('ID do avaliador é obrigatório', 400, 'INVALID_ASSESSOR_ID');
+      throw new AppError('A data da avaliação não pode ser futura', 400, 'INVALID_EVALUATION_DATE');
     }
   }
 }
