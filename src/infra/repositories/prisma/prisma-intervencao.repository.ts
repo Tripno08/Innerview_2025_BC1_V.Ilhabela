@@ -6,7 +6,7 @@ import {
 } from '../../../domain/entities/intervencao.entity';
 import {
   IIntervencaoRepository,
-  ICatalogoIntervencaoRepository
+  ICatalogoIntervencaoRepository,
 } from '../../../domain/repositories/intervencao-repository.interface';
 import {
   FiltrosIntervencaoDTO,
